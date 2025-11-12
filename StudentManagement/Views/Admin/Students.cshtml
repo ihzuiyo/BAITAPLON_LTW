@@ -63,6 +63,12 @@
                 <tbody>
                     @foreach (var student in Model)
                     {
+                        var statusName = student.Status?.StatusName ?? "Không xác định";
+                        var badgeClass = statusName == "Đang học" ? "bg-success" : 
+                                        statusName == "Bảo lưu" ? "bg-warning" : 
+                                        statusName == "Tốt nghiệp" ? "bg-info" : 
+                                        "bg-secondary";
+                        
                         <tr>
                             <td><input type="checkbox" class="row-checkbox"></td>
                             <td><strong>@student.StudentCode</strong></td>
@@ -72,8 +78,8 @@
                             <td>@student.Email</td>
                             <td>@student.PhoneNumber</td>
                             <td>
-                                <span class="badge @(student.Status == "Đang học" ? "bg-success" : student.Status == "Bảo lưu" ? "bg-warning" : "bg-info")">
-                                    @student.Status
+                                <span class="badge @badgeClass">
+                                    @statusName
                                 </span>
                             </td>
                             <td>

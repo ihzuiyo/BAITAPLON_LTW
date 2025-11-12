@@ -1,9 +1,12 @@
 wwwroot\css\admin.css
+wwwroot\css\auth.css
 wwwroot\css\site.css
 wwwroot\css\student.css
 wwwroot\css\teacher.css
 wwwroot\favicon.ico
 wwwroot\js\admin.js
+wwwroot\js\auth.js
+wwwroot\js\register.js
 wwwroot\js\site.js
 wwwroot\js\student.js
 wwwroot\js\teacher.js

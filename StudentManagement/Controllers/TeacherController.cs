@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
+using StudentManagement.Attributes;
 
 namespace StudentManagement.Controllers
 {
+    [AuthorizeRole("Teacher", "Admin")]
     public class TeacherController : Controller
     {
-        private readonly QlsvTtthContext _context;
+        private readonly QlsvTrungTamTinHocContext _context;
 
-        public TeacherController(QlsvTtthContext context)
+        public TeacherController(QlsvTrungTamTinHocContext context)
         {
             _context = context;
         }
@@ -19,7 +21,7 @@ namespace StudentManagement.Controllers
             // For demo purposes, we'll show all classes
             var myClasses = await _context.Classes
                 .Include(c => c.Course)
-                .Include(c => c.Room)
+                //.Include(c => c.Room)
                 .ToListAsync();
 
             ViewBag.TotalClasses = myClasses.Count;
@@ -32,7 +34,7 @@ namespace StudentManagement.Controllers
         {
             var classes = await _context.Classes
                 .Include(c => c.Course)
-                .Include(c => c.Room)
+                //.Include(c => c.Room)
                 .Include(c => c.ClassSchedules)
                 .ToListAsync();
             return View(classes);

@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
+using StudentManagement.Attributes;
 
 namespace StudentManagement.Controllers
 {
+    [AuthorizeRole("Student", "Admin")]
     public class StudentController : Controller
     {
-        private readonly QlsvTtthContext _context;
+        private readonly QlsvTrungTamTinHocContext _context;
 
-        public StudentController(QlsvTtthContext context)
+        public StudentController(QlsvTrungTamTinHocContext context)
         {
             _context = context;
         }

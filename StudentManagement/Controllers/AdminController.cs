@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
+using StudentManagement.Attributes;
 
 namespace StudentManagement.Controllers
 {
+    [AuthorizeRole("Admin")]
     public class AdminController : Controller
     {
-        private readonly QlsvTtthContext _context;
+        private readonly QlsvTrungTamTinHocContext _context;
 
-        public AdminController(QlsvTtthContext context)
+        public AdminController(QlsvTrungTamTinHocContext context)
         {
             _context = context;
         }
@@ -33,6 +35,7 @@ namespace StudentManagement.Controllers
         {
             var students = await _context.Students
                 .Include(s => s.User)
+                .Include(s => s.Status) // Include the Status navigation property
                 .ToListAsync();
             return View(students);
         }
@@ -42,7 +45,7 @@ namespace StudentManagement.Controllers
         {
             var classes = await _context.Classes
                 .Include(c => c.Course)
-                .Include(c => c.Room)
+                .Include(c => c.Teacher)
                 .ToListAsync();
             return View(classes);
         }

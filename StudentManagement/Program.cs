@@ -12,7 +12,11 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
+
+// Add distributed memory cache for session
+builder.Services.AddDistributedMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<QlsvTrungTamTinHocContext>(x => x.UseSqlServer(connectionString));
@@ -22,8 +26,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseExceptionHandler("/Account/Login");
     app.UseHsts();
 }
 
@@ -32,12 +35,14 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Add session middleware
+// Add session middleware (must be before UseAuthorization)
 app.UseSession();
 
 app.UseAuthorization();
 
-app.MapControllerRoute(    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+// Set Account/Login as the default route
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
