@@ -1,6 +1,12 @@
+wwwroot\css\admin.css
 wwwroot\css\site.css
+wwwroot\css\student.css
+wwwroot\css\teacher.css
 wwwroot\favicon.ico
+wwwroot\js\admin.js
 wwwroot\js\site.js
+wwwroot\js\student.js
+wwwroot\js\teacher.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.min.css

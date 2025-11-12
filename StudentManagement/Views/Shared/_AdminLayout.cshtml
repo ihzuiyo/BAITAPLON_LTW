@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Classe369 Admin</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <i class="fas fa-graduation-cap logo-icon"></i>
+                    <h3>CLASSE369</h3>
+                </div>
+                <p class="subtitle">Quản Trị Hệ Thống</p>
+            </div>
+
+            <ul class="list-unstyled components">
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Dashboard">
+                        <i class="fas fa-chart-line"></i> Tổng Quan
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Students">
+                        <i class="fas fa-user-graduate"></i> Sinh Viên
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Classes" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Classes">
+                        <i class="fas fa-chalkboard-teacher"></i> Lớp Học
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Courses" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Courses">
+                        <i class="fas fa-book"></i> Khóa Học
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Users" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Users">
+                        <i class="fas fa-users"></i> Người Dùng
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Tuitions" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Tuitions">
+                        <i class="fas fa-money-bill-wave"></i> Học Phí
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Notifications" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Notifications">
+                        <i class="fas fa-bell"></i> Thông Báo
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Reports" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Reports">
+                        <i class="fas fa-chart-bar"></i> Báo Cáo
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <a href="#" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Đăng Xuất
+                </a>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light top-navbar">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="ml-auto d-flex align-items-center">
+                        <div class="user-info">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <main role="main" class="main-content">
+                @RenderBody()
+            </main>
+
+            <footer class="footer">
+                <div class="container-fluid">
+                    <span>&copy; 2025 - Classe369 - Hệ Thống Quản Lý Trung Tâm Tin Học</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/admin.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
