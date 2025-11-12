@@ -15,6 +15,8 @@ public partial class Enrollment
 
     public string Status { get; set; } = null!;
 
+    public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+
     public virtual Class Class { get; set; } = null!;
 
     public virtual ICollection<Score> Scores { get; set; } = new List<Score>();

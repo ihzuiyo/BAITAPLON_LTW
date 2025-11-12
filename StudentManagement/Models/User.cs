@@ -7,7 +7,7 @@ public partial class User
 {
     public int UserId { get; set; }
 
-    public int RoleId { get; set; }
+    public int? RoleId { get; set; }
 
     public string Username { get; set; } = null!;
 
@@ -31,7 +31,9 @@ public partial class User
 
     public virtual ICollection<Receipt> Receipts { get; set; } = new List<Receipt>();
 
-    public virtual Role Role { get; set; } = null!;
+    public virtual Role? Role { get; set; }
 
     public virtual Student? Student { get; set; }
+
+    public virtual Teacher? Teacher { get; set; }
 }

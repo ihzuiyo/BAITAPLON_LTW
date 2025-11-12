@@ -15,7 +15,7 @@ builder.Services.AddSession(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<QlsvTtthContext>(x => x.UseSqlServer(connectionString));
+builder.Services.AddDbContext<QlsvTrungTamTinHocContext>(x => x.UseSqlServer(connectionString));
 
 var app = builder.Build();
 
@@ -37,8 +37,7 @@ app.UseSession();
 
 app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "default",
+app.MapControllerRoute(    name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
