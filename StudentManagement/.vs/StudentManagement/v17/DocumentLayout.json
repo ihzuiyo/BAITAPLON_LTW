@@ -3,16 +3,28 @@
   "WorkspaceRootPath": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\models\\qlsvttthcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:models\\qlsvttthcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\models\\qlsvtrungtamtinhoccontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:models\\qlsvtrungtamtinhoccontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\study\\dai hoc\\nam3\\laptrinhweb\\btlltw\\studentmanagement\\models\\errorviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:models\\errorviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 8,
           "Children": [
             {
               "$type": "Bookmark",
@@ -38,39 +50,74 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "QlsvTtthContext.cs",
-              "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\QlsvTtthContext.cs",
-              "RelativeDocumentMoniker": "Models\\QlsvTtthContext.cs",
-              "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\QlsvTtthContext.cs",
-              "RelativeToolTip": "Models\\QlsvTtthContext.cs",
-              "ViewState": "AgIAABcAAAAAAAAAAAA9wAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "QlsvTrungTamTinHocContext.cs",
+              "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\QlsvTrungTamTinHocContext.cs",
+              "RelativeDocumentMoniker": "Models\\QlsvTrungTamTinHocContext.cs",
+              "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\QlsvTrungTamTinHocContext.cs",
+              "RelativeToolTip": "Models\\QlsvTrungTamTinHocContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-11T06:06:12.063Z",
+              "WhenOpened": "2025-11-12T03:53:42.758Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 5,
+              "Title": "ErrorViewModel.cs",
+              "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\ErrorViewModel.cs",
+              "RelativeDocumentMoniker": "Models\\ErrorViewModel.cs",
+              "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Models\\ErrorViewModel.cs",
+              "RelativeToolTip": "Models\\ErrorViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-12T03:51:01.304Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "appsettings.Development.json",
+              "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\appsettings.Development.json",
+              "RelativeDocumentMoniker": "appsettings.Development.json",
+              "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\appsettings.Development.json",
+              "RelativeToolTip": "appsettings.Development.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-12T03:27:51.678Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "HomeController.cs",
+              "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Controllers\\HomeController.cs",
+              "RelativeDocumentMoniker": "Controllers\\HomeController.cs",
+              "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Controllers\\HomeController.cs",
+              "RelativeToolTip": "Controllers\\HomeController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-11T19:01:19.47Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
               "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\appsettings.json",
               "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAABeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-11T05:36:20.681Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-11T05:36:20.681Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
               "ToolTip": "D:\\study\\dai hoc\\nam3\\LapTrinhWeb\\BTLLTW\\StudentManagement\\Program.cs",
               "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAABWAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAABgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-11T05:35:10.202Z",
               "EditorCaption": ""

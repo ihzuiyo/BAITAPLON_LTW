@@ -1,7 +1,7 @@
 ﻿
 --CREATE DATABASE QLSV_TTTH
 
---USE QLSV_TTTH
+USE QLSV_TTTH
 --GO
 
 /* ===================================
