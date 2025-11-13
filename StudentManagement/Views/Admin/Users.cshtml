@@ -1,0 +1,442 @@
+﻿@model IEnumerable<StudentManagement.Models.User>
+@{
+    ViewData["Title"] = "Quản Lý Người Dùng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-users"></i> Quản Lý Người Dùng</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="fas fa-user-plus"></i> Thêm Người Dùng
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-warning">
+            <i class="fas fa-user-lock"></i> Phân Quyền
+        </button>
+    </div>
+</div>
+
+<!-- User Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="user-stat-card stat-total">
+            <div class="stat-icon-wrapper">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count()</h3>
+                <p>Tổng Người Dùng</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="user-stat-card stat-admin">
+            <div class="stat-icon-wrapper">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count(u => u.Role?.RoleName == "Admin")</h3>
+                <p>Quản Trị Viên</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="user-stat-card stat-teacher">
+            <div class="stat-icon-wrapper">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count(u => u.Role?.RoleName == "Teacher")</h3>
+                <p>Giảng Viên</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="user-stat-card stat-student">
+            <div class="stat-icon-wrapper">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count(u => u.Role?.RoleName == "Student")</h3>
+                <p>Sinh Viên</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list-ul"></i> Danh Sách Người Dùng</h5>
+            <div class="header-stats">
+                <span class="badge bg-success">
+                    <i class="fas fa-check-circle"></i> 
+                    @Model.Count(u => u.Status == "Active") Hoạt động
+                </span>
+                <span class="badge bg-danger ms-2">
+                    <i class="fas fa-ban"></i> 
+                    @Model.Count(u => u.Status == "Inactive") Không hoạt động
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-controls mb-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchUser" placeholder="Tìm kiếm theo tên, email, username...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterRole">
+                        <option value="">Tất cả vai trò</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Teacher">Giảng viên</option>
+                        <option value="Student">Sinh viên</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterStatus">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Active">Hoạt động</option>
+                        <option value="Inactive">Không hoạt động</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="sortBy">
+                        <option value="newest">Mới nhất</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="name">Tên A-Z</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="entriesPerPage">
+                        <option value="10">10 dòng</option>
+                        <option value="25">25 dòng</option>
+                        <option value="50">50 dòng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th width="3%"><input type="checkbox" id="selectAll"></th>
+                        <th width="5%">ID</th>
+                        <th width="15%">Họ và Tên</th>
+                        <th width="12%">Username</th>
+                        <th width="15%">Email</th>
+                        <th width="10%">Số Điện Thoại</th>
+                        <th width="10%">Vai Trò</th>
+                        <th width="10%">Trạng Thái</th>
+                        <th width="10%">Ngày Tạo</th>
+                        <th width="10%">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.OrderByDescending(u => u.DateCreated))
+                    {
+                        var roleName = user.Role?.RoleName ?? "Chưa phân quyền";
+                        var roleBadgeClass = roleName switch
+                        {
+                            "Admin" => "bg-danger",
+                            "Teacher" => "bg-primary",
+                            "Student" => "bg-info",
+                            _ => "bg-secondary"
+                        };
+                        
+                        var roleIcon = roleName switch
+                        {
+                            "Admin" => "fa-user-shield",
+                            "Teacher" => "fa-chalkboard-teacher",
+                            "Student" => "fa-user-graduate",
+                            _ => "fa-user"
+                        };
+                        
+                        var statusBadge = user.Status == "Active" ? "bg-success" : "bg-danger";
+                        var statusText = user.Status == "Active" ? "Hoạt động" : "Không hoạt động";
+                        
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td><strong class="text-primary">#@user.UserId</strong></td>
+                            <td>
+                                <div class="user-info-cell">
+                                    <div class="user-avatar">
+                                        <i class="fas @roleIcon"></i>
+                                    </div>
+                                    <div class="user-details">
+                                        <strong>@(user.FullName ?? "Chưa cập nhật")</strong>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="username-badge">
+                                    <i class="fas fa-at"></i> @user.Username
+                                </span>
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="fas fa-envelope text-muted"></i> @user.Email
+                                </small>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(user.PhoneNumber))
+                                {
+                                    <small>
+                                        <i class="fas fa-phone text-success"></i> @user.PhoneNumber
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted fst-italic">Chưa có</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @roleBadgeClass">
+                                    <i class="fas @roleIcon"></i> @roleName
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @statusBadge">@statusText</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i>
+                                    @user.DateCreated.ToString("dd/MM/yyyy")
+                                </small>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Đổi mật khẩu">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    @if (user.Status == "Active")
+                                    {
+                                        <button class="btn btn-sm btn-danger" title="Vô hiệu hóa">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-success" title="Kích hoạt">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    Hiển thị <strong>1</strong> đến <strong>@Math.Min(10, Model.Count())</strong> trong tổng số <strong>@Model.Count()</strong> người dùng
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New User -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addUserModalLabel">
+                    <i class="fas fa-user-plus"></i> Thêm Người Dùng Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-user"></i> Họ và Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Nhập họ và tên" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-at"></i> Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Nhập username" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-envelope"></i> Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" placeholder="example@email.com" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-phone"></i> Số Điện Thoại</label>
+                            <input type="tel" class="form-control" placeholder="0xxxxxxxxx">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-lock"></i> Mật Khẩu <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" placeholder="Nhập mật khẩu" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-lock"></i> Xác Nhận Mật Khẩu <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" placeholder="Nhập lại mật khẩu" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-user-tag"></i> Vai Trò <span class="text-danger">*</span></label>
+                            <select class="form-select" required>
+                                <option value="">-- Chọn vai trò --</option>
+                                <option value="1">Admin</option>
+                                <option value="2">Teacher</option>
+                                <option value="3">Student</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-toggle-on"></i> Trạng Thái</label>
+                            <select class="form-select">
+                                <option value="Active" selected>Hoạt động</option>
+                                <option value="Inactive">Không hoạt động</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Người Dùng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .user-stat-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .user-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stat-total {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .stat-admin {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .stat-teacher {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .stat-student {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        
+        .stat-icon-wrapper {
+            font-size: 45px;
+            opacity: 0.8;
+        }
+        
+        .stat-info h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .stat-info p {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .user-info-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        .username-badge {
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #333;
+        }
+        
+        .header-stats .badge {
+            font-size: 0.85em;
+            padding: 6px 12px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchUser').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            
+            // Select all checkboxes
+            $('#selectAll').click(function() {
+                $('.row-checkbox').prop('checked', this.checked);
+            });
+        });
+    </script>
+}
