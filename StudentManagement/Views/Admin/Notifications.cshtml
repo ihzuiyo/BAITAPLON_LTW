@@ -1,0 +1,583 @@
+﻿@model IEnumerable<StudentManagement.Models.Notification>
+@{
+    ViewData["Title"] = "Quản Lý Thông Báo";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    
+    var totalNotifications = Model.Count();
+    var todayNotifications = Model.Count(n => n.CreatedDate.Date == DateTime.Today);
+    var totalRecipients = Model.Sum(n => n.NotificationRecipients.Count);
+    var totalRead = Model.Sum(n => n.NotificationRecipients.Count(r => r.IsRead));
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-bell"></i> Quản Lý Thông Báo</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createNotificationModal">
+            <i class="fas fa-paper-plane"></i> Tạo Thông Báo Mới
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-info">
+            <i class="fas fa-history"></i> Lịch Sử
+        </button>
+    </div>
+</div>
+
+<!-- Notification Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="notification-stat-card card-total">
+            <div class="stat-icon-box">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="stat-content-box">
+                <h3>@totalNotifications</h3>
+                <p>Tổng Thông Báo</p>
+                <div class="stat-trend">
+                    <i class="fas fa-arrow-up text-white"></i>
+                    <span>12% so với tháng trước</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="notification-stat-card card-today">
+            <div class="stat-icon-box">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="stat-content-box">
+                <h3>@todayNotifications</h3>
+                <p>Hôm Nay</p>
+                <div class="stat-trend">
+                    <i class="fas fa-clock text-white"></i>
+                    <span>Cập nhật mới nhất</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="notification-stat-card card-sent">
+            <div class="stat-icon-box">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content-box">
+                <h3>@totalRecipients</h3>
+                <p>Người Nhận</p>
+                <div class="stat-trend">
+                    <i class="fas fa-user-check text-white"></i>
+                    <span>Tổng lượt gửi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="notification-stat-card card-read">
+            <div class="stat-icon-box">
+                <i class="fas fa-eye"></i>
+            </div>
+            <div class="stat-content-box">
+                <h3>@((totalRecipients > 0 ? (totalRead * 100.0 / totalRecipients) : 0).ToString("F1"))%</h3>
+                <p>Đã Đọc</p>
+                <div class="stat-trend">
+                    <i class="fas fa-chart-line text-white"></i>
+                    <span>@totalRead/@totalRecipients người</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Danh Sách Thông Báo</h5>
+                    <div class="header-badges">
+                        <span class="badge bg-primary">@totalNotifications thông báo</span>
+                        <span class="badge bg-success ms-2">@totalRead đã đọc</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-controls mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="searchNotification" placeholder="Tìm kiếm thông báo...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterDate">
+                                <option value="">Tất cả thời gian</option>
+                                <option value="today">Hôm nay</option>
+                                <option value="week">Tuần này</option>
+                                <option value="month">Tháng này</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="sortBy">
+                                <option value="newest">Mới nhất</option>
+                                <option value="oldest">Cũ nhất</option>
+                                <option value="most_recipients">Nhiều người nhận</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notifications-list">
+                    @foreach (var notification in Model.OrderByDescending(n => n.CreatedDate))
+                    {
+                        var recipientCount = notification.NotificationRecipients.Count;
+                        var readCount = notification.NotificationRecipients.Count(r => r.IsRead);
+                        var readPercentage = recipientCount > 0 ? (readCount * 100.0 / recipientCount) : 0;
+                        var isRecent = (DateTime.Now - notification.CreatedDate).TotalHours < 24;
+                        
+                        <div class="notification-card @(isRecent ? "notification-new" : "")">
+                            <div class="notification-header-row">
+                                <div class="notification-title-section">
+                                    @if (isRecent)
+                                    {
+                                        <span class="badge bg-danger badge-new">MỚI</span>
+                                    }
+                                    <h5 class="notification-title">
+                                        <i class="fas fa-bullhorn text-primary"></i>
+                                        @notification.Title
+                                    </h5>
+                                </div>
+                                <div class="notification-actions">
+                                    <button class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" title="Gửi lại">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="notification-content">
+                                <p class="notification-text">
+                                    @if (!string.IsNullOrEmpty(notification.Content))
+                                    {
+                                        @(notification.Content.Length > 150 ? notification.Content.Substring(0, 150) + "..." : notification.Content)
+                                    }
+                                    else
+                                    {
+                                        <em class="text-muted">Không có nội dung</em>
+                                    }
+                                </p>
+                            </div>
+                            
+                            <div class="notification-footer-row">
+                                <div class="notification-meta">
+                                    <span class="meta-item">
+                                        <i class="fas fa-user text-muted"></i>
+                                        <strong>@notification.Creator.FullName</strong>
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-calendar text-muted"></i>
+                                        @notification.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-users text-muted"></i>
+                                        @recipientCount người nhận
+                                    </span>
+                                </div>
+                                <div class="notification-stats">
+                                    <div class="read-progress">
+                                        <small class="text-muted">Đã đọc: @readCount/@recipientCount</small>
+                                        <div class="progress" style="height: 8px; width: 120px;">
+                                            <div class="progress-bar @(readPercentage > 70 ? "bg-success" : readPercentage > 30 ? "bg-warning" : "bg-danger")" 
+                                                 role="progressbar" 
+                                                 style="width: @readPercentage%" 
+                                                 aria-valuenow="@readPercentage" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Thống Kê Chi Tiết</h5>
+            </div>
+            <div class="card-body">
+                <div class="stats-item">
+                    <div class="stats-label">
+                        <i class="fas fa-envelope-open text-success"></i>
+                        Tỷ lệ đọc trung bình
+                    </div>
+                    <div class="stats-value text-success">
+                        @((totalRecipients > 0 ? (totalRead * 100.0 / totalRecipients) : 0).ToString("F1"))%
+                    </div>
+                </div>
+                <hr>
+                <div class="stats-item">
+                    <div class="stats-label">
+                        <i class="fas fa-paper-plane text-primary"></i>
+                        Thông báo trong tuần
+                    </div>
+                    <div class="stats-value text-primary">
+                        @Model.Count(n => (DateTime.Now - n.CreatedDate).TotalDays <= 7)
+                    </div>
+                </div>
+                <hr>
+                <div class="stats-item">
+                    <div class="stats-label">
+                        <i class="fas fa-user-check text-info"></i>
+                        Người nhận nhiều nhất
+                    </div>
+                    <div class="stats-value text-info">
+                        @(Model.Any() ? Model.Max(n => n.NotificationRecipients.Count) : 0)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-gradient-info text-white">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Mẫu Thông Báo</h5>
+            </div>
+            <div class="card-body">
+                <div class="template-list">
+                    <div class="template-item" data-template="welcome">
+                        <i class="fas fa-hand-wave text-primary"></i>
+                        <span>Chào mừng sinh viên mới</span>
+                    </div>
+                    <div class="template-item" data-template="exam">
+                        <i class="fas fa-file-alt text-warning"></i>
+                        <span>Thông báo lịch thi</span>
+                    </div>
+                    <div class="template-item" data-template="fee">
+                        <i class="fas fa-money-bill text-success"></i>
+                        <span>Nhắc nhở học phí</span>
+                    </div>
+                    <div class="template-item" data-template="event">
+                        <i class="fas fa-calendar-star text-danger"></i>
+                        <span>Sự kiện/Hội thảo</span>
+                    </div>
+                    <div class="template-item" data-template="holiday">
+                        <i class="fas fa-umbrella-beach text-info"></i>
+                        <span>Lịch nghỉ lễ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Notification -->
+<div class="modal fade" id="createNotificationModal" tabindex="-1" aria-labelledby="createNotificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createNotificationModalLabel">
+                    <i class="fas fa-paper-plane"></i> Tạo Thông Báo Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createNotificationForm">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-heading"></i> Tiêu Đề <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" placeholder="Nhập tiêu đề thông báo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-align-left"></i> Nội Dung <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="5" placeholder="Nhập nội dung thông báo..." required></textarea>
+                        <small class="text-muted">Hỗ trợ định dạng HTML cơ bản</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-users"></i> Gửi Đến <span class="text-danger">*</span></label>
+                            <select class="form-select" required>
+                                <option value="">-- Chọn đối tượng --</option>
+                                <option value="all">Tất cả</option>
+                                <option value="students">Tất cả sinh viên</option>
+                                <option value="teachers">Tất cả giảng viên</option>
+                                <option value="class">Theo lớp học</option>
+                                <option value="individual">Cá nhân cụ thể</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-clock"></i> Thời Gian Gửi</label>
+                            <select class="form-select">
+                                <option value="now">Gửi ngay</option>
+                                <option value="schedule">Lên lịch gửi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 d-none" id="scheduleDateTime">
+                        <label class="form-label"><i class="fas fa-calendar-alt"></i> Chọn Ngày Giờ</label>
+                        <input type="datetime-local" class="form-control">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="sendEmail">
+                        <label class="form-check-label" for="sendEmail">
+                            <i class="fas fa-envelope"></i> Gửi thêm qua Email
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-info">
+                    <i class="fas fa-save"></i> Lưu Nháp
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Gửi Thông Báo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .notification-stat-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .notification-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-total {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-today {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .card-sent {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .card-read {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        
+        .stat-icon-box {
+            font-size: 45px;
+            opacity: 0.8;
+        }
+        
+        .stat-content-box h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .stat-content-box p {
+            margin: 5px 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .stat-trend {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .stat-trend i {
+            margin-right: 3px;
+        }
+        
+        .notifications-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .notification-card {
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+            background: #fff;
+        }
+        
+        .notification-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--primary-color);
+        }
+        
+        .notification-new {
+            border-left: 4px solid #f5576c;
+            background: #fff5f7;
+        }
+        
+        .notification-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .notification-title-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .badge-new {
+            font-size: 10px;
+            padding: 3px 8px;
+        }
+        
+        .notification-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .notification-content {
+            margin: 10px 0;
+        }
+        
+        .notification-text {
+            margin: 0;
+            color: #6c757d;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .notification-footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .notification-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 13px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #6c757d;
+        }
+        
+        .notification-stats {
+            display: flex;
+            align-items: center;
+        }
+        
+        .read-progress {
+            text-align: right;
+        }
+        
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .stats-label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .stats-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .template-item {
+            padding: 12px;
+            border: 1px solid #e3e6f0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .template-item:hover {
+            background: #f8f9fa;
+            border-color: var(--primary-color);
+        }
+        
+        .template-item i {
+            font-size: 18px;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .bg-gradient-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .header-badges .badge {
+            font-size: 0.85em;
+            padding: 6px 12px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchNotification').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('.notification-card').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            
+            // Template selection
+            $('.template-item').click(function() {
+                $('.template-item').removeClass('active');
+                $(this).addClass('active');
+                // Load template content here
+            });
+        });
+    </script>
+}

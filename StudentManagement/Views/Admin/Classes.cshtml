@@ -1,0 +1,409 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    ViewData["Title"] = "Quản Lý Lớp Học";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-chalkboard-teacher"></i> Quản Lý Lớp Học</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassModal">
+            <i class="fas fa-plus"></i> Tạo Lớp Mới
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-info">
+            <i class="fas fa-calendar-alt"></i> Xem Lịch
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-mini-card bg-gradient-primary">
+            <div class="stat-mini-icon">
+                <i class="fas fa-chalkboard"></i>
+            </div>
+            <div class="stat-mini-content">
+                <h3>@Model.Count()</h3>
+                <p>Tổng Lớp Học</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-mini-card bg-gradient-success">
+            <div class="stat-mini-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-mini-content">
+                <h3>@Model.Sum(c => c.Enrollments.Count)</h3>
+                <p>Sinh Viên Đã Ghi Danh</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-mini-card bg-gradient-warning">
+            <div class="stat-mini-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div class="stat-mini-content">
+                <h3>@Model.Count(c => c.Teacher != null)</h3>
+                <p>Đã Phân Giảng Viên</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-mini-card bg-gradient-info">
+            <div class="stat-mini-icon">
+                <i class="fas fa-chair"></i>
+            </div>
+            <div class="stat-mini-content">
+                <h3>@Model.Sum(c => (c.MaxStudents ?? 0) - c.Enrollments.Count)</h3>
+                <p>Chỗ Trống</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Danh Sách Lớp Học</h5>
+            <div class="card-header-actions">
+                <button class="btn btn-sm btn-outline-secondary" id="toggleViewMode">
+                    <i class="fas fa-th"></i> Chế Độ Xem
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-controls mb-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchClass" placeholder="Tìm kiếm theo mã lớp, tên lớp...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterCourse">
+                        <option value="">Tất cả khóa học</option>
+                        @foreach (var course in Model.Select(c => c.Course).Distinct())
+                        {
+                            <option value="@course.CourseId">@course.CourseName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterTeacher">
+                        <option value="">Tất cả giảng viên</option>
+                        @foreach (var teacher in Model.Where(c => c.Teacher != null).Select(c => c.Teacher).Distinct())
+                        {
+                            <option value="@teacher.TeacherId">@teacher.FirstName @teacher.LastName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="entriesPerPage">
+                        <option value="10">10 dòng</option>
+                        <option value="25">25 dòng</option>
+                        <option value="50">50 dòng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>Mã Lớp</th>
+                        <th>Tên Lớp</th>
+                        <th>Khóa Học</th>
+                        <th>Giảng Viên</th>
+                        <th>Lịch Học</th>
+                        <th>Sĩ Số</th>
+                        <th>Tình Trạng</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var classItem in Model)
+                    {
+                        var enrollmentCount = classItem.Enrollments.Count;
+                        var maxStudents = classItem.MaxStudents ?? 0;
+                        var percentage = maxStudents > 0 ? (enrollmentCount * 100.0 / maxStudents) : 0;
+                        var statusBadge = percentage >= 90 ? "bg-danger" : percentage >= 70 ? "bg-warning" : "bg-success";
+                        var statusText = percentage >= 90 ? "Gần Đầy" : percentage >= 70 ? "Còn Ít Chỗ" : "Còn Chỗ";
+                        
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td><strong class="text-primary">@classItem.ClassCode</strong></td>
+                            <td>
+                                <div class="class-name-cell">
+                                    <strong>@classItem.ClassName</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">@classItem.Course.CourseName</span>
+                            </td>
+                            <td>
+                                @if (classItem.Teacher != null)
+                                {
+                                    <div class="teacher-info">
+                                        <i class="fas fa-chalkboard-teacher text-primary"></i>
+                                        <span>@classItem.Teacher.FirstName @classItem.Teacher.LastName</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted"><i class="fas fa-user-times"></i> Chưa phân công</span>
+                                }
+                            </td>
+                            <td>
+                                @if (classItem.ClassSchedules.Any())
+                                {
+                                    <div class="schedule-preview">
+                                        @foreach (var schedule in classItem.ClassSchedules.Take(2))
+                                        {
+                                            <small class="d-block">
+                                                <i class="fas fa-calendar-day text-success"></i>
+                                                @schedule.Weekday: @schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")
+                                            </small>
+                                        }
+                                        @if (classItem.ClassSchedules.Count > 2)
+                                        {
+                                            <small class="text-muted">+@(classItem.ClassSchedules.Count - 2) buổi khác</small>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa có lịch</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="enrollment-info">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar @statusBadge" role="progressbar" 
+                                             style="width: @percentage%" 
+                                             aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
+                                            @enrollmentCount/@maxStudents
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">@percentage.ToString("F0")% đã đăng ký</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @statusBadge">@statusText</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" title="Chi tiết lớp">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" title="Danh sách sinh viên">
+                                        <i class="fas fa-users"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Lịch học">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    Hiển thị <strong>1</strong> đến <strong>@Math.Min(10, Model.Count())</strong> trong tổng số <strong>@Model.Count()</strong> lớp
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Class -->
+<div class="modal fade" id="addClassModal" tabindex="-1" aria-labelledby="addClassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addClassModalLabel">
+                    <i class="fas fa-plus-circle"></i> Tạo Lớp Học Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addClassForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-barcode"></i> Mã Lớp <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: CS101.K25" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-tag"></i> Tên Lớp <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: Lập trình C# K25" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-book"></i> Khóa Học <span class="text-danger">*</span></label>
+                            <select class="form-select" required>
+                                <option value="">-- Chọn khóa học --</option>
+                                @foreach (var course in Model.Select(c => c.Course).Distinct())
+                                {
+                                    <option value="@course.CourseId">@course.CourseName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-chalkboard-teacher"></i> Giảng Viên</label>
+                            <select class="form-select">
+                                <option value="">-- Chọn giảng viên --</option>
+                                @foreach (var teacher in Model.Where(c => c.Teacher != null).Select(c => c.Teacher).Distinct())
+                                {
+                                    <option value="@teacher.TeacherId">@teacher.FirstName @teacher.LastName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-users"></i> Sĩ Số Tối Đa</label>
+                            <input type="number" class="form-control" value="30" min="1" max="100">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Lớp Học
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .stat-mini-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-mini-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-mini-icon {
+            font-size: 40px;
+            opacity: 0.8;
+            margin-right: 15px;
+        }
+        
+        .stat-mini-content h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .stat-mini-content p {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .bg-gradient-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .bg-gradient-warning {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        }
+        
+        .bg-gradient-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .class-name-cell {
+            max-width: 200px;
+        }
+        
+        .teacher-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .schedule-preview {
+            font-size: 0.85em;
+        }
+        
+        .enrollment-info .progress {
+            margin-bottom: 5px;
+        }
+        
+        .card-header-actions .btn {
+            border-radius: 5px;
+        }
+        
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchClass').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            
+            // Select all checkboxes
+            $('#selectAll').click(function() {
+                $('.row-checkbox').prop('checked', this.checked);
+            });
+        });
+    </script>
+}

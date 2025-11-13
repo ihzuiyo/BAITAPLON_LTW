@@ -1,0 +1,512 @@
+﻿@model IEnumerable<StudentManagement.Models.Course>
+@{
+    ViewData["Title"] = "Quản Lý Khóa Học";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-book"></i> Quản Lý Khóa Học</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+            <i class="fas fa-plus"></i> Thêm Khóa Học
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-info">
+            <i class="fas fa-chart-pie"></i> Thống Kê
+        </button>
+    </div>
+</div>
+
+<!-- Course Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="course-stat-card card-purple">
+            <div class="icon-wrapper">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@Model.Count()</h3>
+                <p>Tổng Khóa Học</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="course-stat-card card-green">
+            <div class="icon-wrapper">
+                <i class="fas fa-chalkboard"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@Model.Sum(c => c.Classes.Count)</h3>
+                <p>Lớp Đang Mở</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="course-stat-card card-orange">
+            <div class="icon-wrapper">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@Model.Sum(c => c.Classes.Sum(cl => cl.Enrollments.Count))</h3>
+                <p>Học Viên Đăng Ký</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="course-stat-card card-blue">
+            <div class="icon-wrapper">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@Model.Average(c => c.TuitionFee).ToString("N0")</h3>
+                <p>Học Phí TB (VNĐ)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Danh Sách Khóa Học</h5>
+            <div class="view-options">
+                <button class="btn btn-sm btn-outline-primary active" id="tableView">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" id="gridView">
+                    <i class="fas fa-th-large"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-controls mb-4">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchCourse" placeholder="Tìm kiếm theo mã, tên khóa học...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterDuration">
+                        <option value="">Tất cả thời lượng</option>
+                        <option value="1">1-2 tháng</option>
+                        <option value="3">3-4 tháng</option>
+                        <option value="5">5+ tháng</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="sortBy">
+                        <option value="name">Tên A-Z</option>
+                        <option value="fee_asc">Học phí tăng dần</option>
+                        <option value="fee_desc">Học phí giảm dần</option>
+                        <option value="popular">Phổ biến nhất</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="entriesPerPage">
+                        <option value="10">10 dòng</option>
+                        <option value="25">25 dòng</option>
+                        <option value="50">50 dòng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table View (Default) -->
+        <div id="tableViewContent" class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th width="5%"><input type="checkbox" id="selectAll"></th>
+                        <th width="10%">Mã Khóa</th>
+                        <th width="20%">Tên Khóa Học</th>
+                        <th width="25%">Mô Tả</th>
+                        <th width="10%">Thời Lượng</th>
+                        <th width="10%">Học Phí</th>
+                        <th width="10%">Lớp/HV</th>
+                        <th width="10%">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var course in Model)
+                    {
+                        var classCount = course.Classes.Count;
+                        var studentCount = course.Classes.Sum(c => c.Enrollments.Count);
+                        
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td>
+                                <span class="badge bg-primary fs-6">@course.CourseCode</span>
+                            </td>
+                            <td>
+                                <div class="course-title">
+                                    <strong>@course.CourseName</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="course-description">
+                                    @if (!string.IsNullOrEmpty(course.Description))
+                                    {
+                                        <small class="text-muted">
+                                            @(course.Description.Length > 80 ? course.Description.Substring(0, 80) + "..." : course.Description)
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted fst-italic">Chưa có mô tả</small>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">
+                                    <i class="fas fa-clock"></i> @course.Duration
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="text-success">@course.TuitionFee.ToString("N0") VNĐ</strong>
+                            </td>
+                            <td>
+                                <div class="course-stats">
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-chalkboard-teacher"></i> @classCount lớp
+                                    </span>
+                                    <span class="badge bg-warning text-dark mt-1">
+                                        <i class="fas fa-user-graduate"></i> @studentCount HV
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" title="Xem lớp học">
+                                        <i class="fas fa-list-alt"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Grid View (Hidden by default) -->
+        <div id="gridViewContent" class="row d-none">
+            @foreach (var course in Model)
+            {
+                var classCount = course.Classes.Count;
+                var studentCount = course.Classes.Sum(c => c.Enrollments.Count);
+                
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="course-card">
+                        <div class="course-card-header">
+                            <span class="course-code-badge">@course.CourseCode</span>
+                            <div class="course-actions-dropdown">
+                                <button class="btn btn-sm btn-link text-white">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="course-card-body">
+                            <h5 class="course-card-title">@course.CourseName</h5>
+                            <p class="course-card-description">
+                                @(string.IsNullOrEmpty(course.Description) ? "Chưa có mô tả" : 
+                                  (course.Description.Length > 100 ? course.Description.Substring(0, 100) + "..." : course.Description))
+                            </p>
+                            <div class="course-card-info">
+                                <div class="info-item">
+                                    <i class="fas fa-clock text-info"></i>
+                                    <span>@course.Duration</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-dollar-sign text-success"></i>
+                                    <span>@course.TuitionFee.ToString("N0") VNĐ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card-footer">
+                            <div class="footer-stats">
+                                <span><i class="fas fa-chalkboard-teacher"></i> @classCount lớp</span>
+                                <span><i class="fas fa-user-graduate"></i> @studentCount học viên</span>
+                            </div>
+                            <div class="footer-actions">
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="pagination-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    Hiển thị <strong>1</strong> đến <strong>@Math.Min(10, Model.Count())</strong> trong tổng số <strong>@Model.Count()</strong> khóa học
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Course -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addCourseModalLabel">
+                    <i class="fas fa-plus-circle"></i> Thêm Khóa Học Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCourseForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-barcode"></i> Mã Khóa Học <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: CSHARP-101" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-tag"></i> Tên Khóa Học <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: Lập trình C# nâng cao" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-align-left"></i> Mô Tả</label>
+                        <textarea class="form-control" rows="3" placeholder="Mô tả về khóa học..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-clock"></i> Thời Lượng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: 3 tháng" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-dollar-sign"></i> Học Phí (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" placeholder="Ví dụ: 3500000" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Khóa Học
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .course-stat-card {
+            border-radius: 10px;
+            padding: 25px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .course-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-purple {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .card-orange {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        }
+        
+        .card-blue {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .course-stat-card .icon-wrapper {
+            font-size: 50px;
+            opacity: 0.8;
+        }
+        
+        .course-stat-card .stat-content h3 {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 700;
+        }
+        
+        .course-stat-card .stat-content p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .view-options .btn {
+            margin-left: 5px;
+        }
+        
+        .view-options .btn.active {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .course-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        /* Grid View Styles */
+        .course-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .course-card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .course-code-badge {
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .course-card-body {
+            padding: 20px;
+            flex-grow: 1;
+            background: #fff;
+        }
+        
+        .course-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .course-card-description {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 15px;
+            min-height: 60px;
+        }
+        
+        .course-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .course-card-info .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .course-card-footer {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .footer-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .footer-actions {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchCourse').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            
+            // Toggle view mode
+            $('#tableView').click(function() {
+                $('#tableViewContent').removeClass('d-none');
+                $('#gridViewContent').addClass('d-none');
+                $(this).addClass('active');
+                $('#gridView').removeClass('active');
+            });
+            
+            $('#gridView').click(function() {
+                $('#gridViewContent').removeClass('d-none');
+                $('#tableViewContent').addClass('d-none');
+                $(this).addClass('active');
+                $('#tableView').removeClass('active');
+            });
+            
+            // Select all checkboxes
+            $('#selectAll').click(function() {
+                $('.row-checkbox').prop('checked', this.checked);
+            });
+        });
+    </script>
+}

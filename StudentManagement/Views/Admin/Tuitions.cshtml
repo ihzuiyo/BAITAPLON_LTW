@@ -1,0 +1,479 @@
+﻿@model IEnumerable<StudentManagement.Models.Tuition>
+@{
+    ViewData["Title"] = "Quản Lý Học Phí";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    
+    var totalRevenue = Model.Sum(t => t.AmountPaid);
+    var totalPending = Model.Where(t => t.Status == "Pending").Sum(t => t.TotalFee - t.AmountPaid);
+    var totalPaid = Model.Count(t => t.Status == "Paid");
+    var totalOverdue = Model.Count(t => t.Status == "Overdue");
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-money-bill-wave"></i> Quản Lý Học Phí</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
+            <i class="fas fa-plus-circle"></i> Ghi Nhận Thanh Toán
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-info">
+            <i class="fas fa-print"></i> In Báo Cáo
+        </button>
+    </div>
+</div>
+
+<!-- Financial Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="finance-card card-revenue">
+            <div class="finance-icon">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="finance-content">
+                <h3>@totalRevenue.ToString("N0") VNĐ</h3>
+                <p>Tổng Doanh Thu</p>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="finance-card card-pending">
+            <div class="finance-icon">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="finance-content">
+                <h3>@totalPending.ToString("N0") VNĐ</h3>
+                <p>Còn Phải Thu</p>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-warning" style="width: 75%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="finance-card card-paid">
+            <div class="finance-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="finance-content">
+                <h3>@totalPaid</h3>
+                <p>Đã Thanh Toán</p>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="finance-card card-overdue">
+            <div class="finance-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="finance-content">
+                <h3>@totalOverdue</h3>
+                <p>Quá Hạn</p>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-danger" style="width: 20%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-receipt"></i> Danh Sách Học Phí</h5>
+            <div class="header-filters">
+                <span class="badge bg-success">Đã thu: @totalRevenue.ToString("N0") VNĐ</span>
+                <span class="badge bg-warning text-dark ms-2">Còn lại: @totalPending.ToString("N0") VNĐ</span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-controls mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchTuition" placeholder="Tìm kiếm sinh viên, lớp...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterStatus">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Paid">Đã thanh toán</option>
+                        <option value="Pending">Chưa thanh toán</option>
+                        <option value="Overdue">Quá hạn</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterMonth">
+                        <option value="">Tất cả tháng</option>
+                        <option value="1">Tháng 1</option>
+                        <option value="2">Tháng 2</option>
+                        <option value="3">Tháng 3</option>
+                        <option value="4">Tháng 4</option>
+                        <option value="5">Tháng 5</option>
+                        <option value="6">Tháng 6</option>
+                        <option value="7">Tháng 7</option>
+                        <option value="8">Tháng 8</option>
+                        <option value="9">Tháng 9</option>
+                        <option value="10">Tháng 10</option>
+                        <option value="11">Tháng 11</option>
+                        <option value="12">Tháng 12</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortBy">
+                        <option value="newest">Mới nhất</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="amount_desc">Số tiền giảm dần</option>
+                        <option value="amount_asc">Số tiền tăng dần</option>
+                        <option value="overdue">Quá hạn trước</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="entriesPerPage">
+                        <option value="10">10 dòng</option>
+                        <option value="25">25 dòng</option>
+                        <option value="50">50 dòng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th width="3%"><input type="checkbox" id="selectAll"></th>
+                        <th width="5%">ID</th>
+                        <th width="12%">Sinh Viên</th>
+                        <th width="15%">Lớp Học</th>
+                        <th width="10%">Tổng Học Phí</th>
+                        <th width="10%">Đã Đóng</th>
+                        <th width="10%">Còn Lại</th>
+                        <th width="10%">Tiến Độ</th>
+                        <th width="8%">Hạn Đóng</th>
+                        <th width="8%">Trạng Thái</th>
+                        <th width="9%">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var tuition in Model)
+                    {
+                        var remaining = tuition.TotalFee - tuition.AmountPaid;
+                        var percentage = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
+                        var progressBarClass = percentage == 100 ? "bg-success" : percentage >= 50 ? "bg-info" : "bg-warning";
+                        
+                        var statusBadge = tuition.Status switch
+                        {
+                            "Paid" => "bg-success",
+                            "Pending" => "bg-warning text-dark",
+                            "Overdue" => "bg-danger",
+                            _ => "bg-secondary"
+                        };
+                        
+                        var statusText = tuition.Status switch
+                        {
+                            "Paid" => "Đã thanh toán",
+                            "Pending" => "Chưa thanh toán",
+                            "Overdue" => "Quá hạn",
+                            _ => "Không xác định"
+                        };
+
+                        var isOverdue = tuition.DueDate.HasValue && tuition.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now && remaining > 0;
+                        
+                        <tr class="@(isOverdue ? "table-danger-light" : "")">
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td><strong class="text-primary">#@tuition.TuitionId</strong></td>
+                            <td>
+                                <div class="student-info">
+                                    <i class="fas fa-user-graduate text-info"></i>
+                                    <div>
+                                        <strong>@tuition.Enrollment.Student.FullName</strong>
+                                        <br><small class="text-muted">@tuition.Enrollment.Student.StudentCode</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="class-info">
+                                    <strong>@tuition.Enrollment.Class.ClassName</strong>
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-book"></i> @tuition.Enrollment.Class.Course.CourseName
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <strong class="text-dark">@tuition.TotalFee.ToString("N0") VNĐ</strong>
+                            </td>
+                            <td>
+                                <span class="text-success fw-bold">@tuition.AmountPaid.ToString("N0") VNĐ</span>
+                            </td>
+                            <td>
+                                @if (remaining > 0)
+                                {
+                                    <span class="text-danger fw-bold">@remaining.ToString("N0") VNĐ</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0 VNĐ</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="payment-progress">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar @progressBarClass" role="progressbar" 
+                                             style="width: @percentage%" 
+                                             aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
+                                            @percentage.ToString("F0")%
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (tuition.DueDate.HasValue)
+                                {
+                                    <small class="@(isOverdue ? "text-danger fw-bold" : "text-muted")">
+                                        <i class="fas fa-calendar-@(isOverdue ? "times" : "check")"></i>
+                                        @tuition.DueDate.Value.ToString("dd/MM/yyyy")
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted fst-italic">Chưa có</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @statusBadge">@statusText</span>
+                                @if (isOverdue)
+                                {
+                                    <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Quá hạn</small>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    @if (remaining > 0)
+                                    {
+                                        <button class="btn btn-sm btn-success" title="Thu tiền">
+                                            <i class="fas fa-money-bill"></i>
+                                        </button>
+                                    }
+                                    <button class="btn btn-sm btn-primary" title="Lịch sử thanh toán">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="In biên lai">
+                                        <i class="fas fa-print"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    Hiển thị <strong>1</strong> đến <strong>@Math.Min(10, Model.Count())</strong> trong tổng số <strong>@Model.Count()</strong> khoản học phí
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Record Payment -->
+<div class="modal fade" id="recordPaymentModal" tabindex="-1" aria-labelledby="recordPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="recordPaymentModalLabel">
+                    <i class="fas fa-money-bill-wave"></i> Ghi Nhận Thanh Toán
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="recordPaymentForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-user-graduate"></i> Sinh Viên <span class="text-danger">*</span></label>
+                            <select class="form-select" required>
+                                <option value="">-- Chọn sinh viên --</option>
+                                @foreach (var tuition in Model.Where(t => t.Status != "Paid"))
+                                {
+                                    <option value="@tuition.TuitionId">
+                                        @tuition.Enrollment.Student.StudentCode - @tuition.Enrollment.Student.FullName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-chalkboard"></i> Lớp Học</label>
+                            <input type="text" class="form-control" readonly placeholder="Sẽ hiển thị sau khi chọn SV">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tổng Học Phí</label>
+                            <input type="text" class="form-control" readonly placeholder="0 VNĐ">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Đã Đóng</label>
+                            <input type="text" class="form-control" readonly placeholder="0 VNĐ">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-danger">Còn Lại</label>
+                            <input type="text" class="form-control fw-bold text-danger" readonly placeholder="0 VNĐ">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-money-bill"></i> Số Tiền Thu <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" placeholder="Nhập số tiền" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-calendar"></i> Ngày Thu</label>
+                            <input type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-sticky-note"></i> Ghi Chú</label>
+                        <textarea class="form-control" rows="3" placeholder="Ghi chú (nếu có)..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-success">
+                    <i class="fas fa-save"></i> Lưu Thanh Toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .finance-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .finance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-revenue {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .card-pending {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        }
+        
+        .card-paid {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .card-overdue {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .finance-icon {
+            font-size: 45px;
+            opacity: 0.8;
+        }
+        
+        .finance-content h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .finance-content p {
+            margin: 5px 0 0 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .student-info, .class-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .payment-progress {
+            min-width: 100px;
+        }
+        
+        .table-danger-light {
+            background-color: #f8d7da !important;
+        }
+        
+        .header-filters .badge {
+            font-size: 0.85em;
+            padding: 6px 12px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchTuition').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            
+            // Select all checkboxes
+            $('#selectAll').click(function() {
+                $('.row-checkbox').prop('checked', this.checked);
+            });
+            
+            // Filter by status
+            $('#filterStatus').change(function() {
+                var status = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    if (status === '') {
+                        $(this).show();
+                    } else {
+                        var rowStatus = $(this).find('.badge').first().text().toLowerCase();
+                        $(this).toggle(rowStatus.indexOf(status) > -1);
+                    }
+                });
+            });
+        });
+    </script>
+}

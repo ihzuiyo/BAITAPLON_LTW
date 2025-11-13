@@ -1,0 +1,622 @@
+﻿@{
+    ViewData["Title"] = "Báo Cáo & Thống Kê";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-chart-bar"></i> Báo Cáo & Thống Kê</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+            <i class="fas fa-plus-circle"></i> Tạo Báo Cáo Mới
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Xuất PDF
+        </button>
+    </div>
+</div>
+
+<!-- Report Overview -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="report-overview-card card-students">
+            <div class="icon-section">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="content-section">
+                <h3>156</h3>
+                <p>Tổng Sinh Viên</p>
+                <small class="trend-up"><i class="fas fa-arrow-up"></i> +15 tháng này</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="report-overview-card card-revenue">
+            <div class="icon-section">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="content-section">
+                <h3>45.2M</h3>
+                <p>Doanh Thu (VNĐ)</p>
+                <small class="trend-up"><i class="fas fa-arrow-up"></i> +8.5% tháng trước</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="report-overview-card card-classes">
+            <div class="icon-section">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <div class="content-section">
+                <h3>24</h3>
+                <p>Lớp Đang Hoạt Động</p>
+                <small class="trend-neutral"><i class="fas fa-minus"></i> Không đổi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="report-overview-card card-completion">
+            <div class="icon-section">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div class="content-section">
+                <h3>87%</h3>
+                <p>Tỷ Lệ Hoàn Thành</p>
+                <small class="trend-up"><i class="fas fa-arrow-up"></i> +3% so kỳ trước</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Tabs -->
+<ul class="nav nav-tabs report-tabs" id="reportTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+            <i class="fas fa-chart-line"></i> Tổng Quan
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="enrollment-tab" data-bs-toggle="tab" data-bs-target="#enrollment" type="button">
+            <i class="fas fa-user-plus"></i> Ghi Danh
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button">
+            <i class="fas fa-money-bill-wave"></i> Tài Chính
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="performance-tab" data-bs-toggle="tab" data-bs-target="#performance" type="button">
+            <i class="fas fa-chart-bar"></i> Kết Quả Học Tập
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content report-tab-content" id="reportTabsContent">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> Xu Hướng Ghi Danh 6 Tháng Gần Đây</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="enrollmentTrendChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-pie-chart"></i> Phân Bố Khóa Học</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="coursePieChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-trophy"></i> Top 5 Khóa Học Phổ Biến</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="popular-courses-list">
+                            <div class="course-rank-item rank-1">
+                                <div class="rank-badge">1</div>
+                                <div class="course-info">
+                                    <strong>Lập trình Python AI</strong>
+                                    <small>85 sinh viên</small>
+                                </div>
+                                <div class="course-progress">
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        <div class="progress-bar bg-success" style="width: 85%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-rank-item rank-2">
+                                <div class="rank-badge">2</div>
+                                <div class="course-info">
+                                    <strong>Web API .NET</strong>
+                                    <small>72 sinh viên</small>
+                                </div>
+                                <div class="course-progress">
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        <div class="progress-bar bg-info" style="width: 72%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-rank-item rank-3">
+                                <div class="rank-badge">3</div>
+                                <div class="course-info">
+                                    <strong>ReactJS Frontend</strong>
+                                    <small>65 sinh viên</small>
+                                </div>
+                                <div class="course-progress">
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        <div class="progress-bar bg-warning" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-rank-item">
+                                <div class="rank-badge">4</div>
+                                <div class="course-info">
+                                    <strong>SQL Server Advanced</strong>
+                                    <small>48 sinh viên</small>
+                                </div>
+                                <div class="course-progress">
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        <div class="progress-bar bg-primary" style="width: 48%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-rank-item">
+                                <div class="rank-badge">5</div>
+                                <div class="course-info">
+                                    <strong>C# WinForms</strong>
+                                    <small>42 sinh viên</small>
+                                </div>
+                                <div class="course-progress">
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        <div class="progress-bar bg-secondary" style="width: 42%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-star"></i> Giảng Viên Xuất Sắc</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="teacher-rating-list">
+                            <div class="teacher-rating-item">
+                                <div class="teacher-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="teacher-details">
+                                    <strong>Đinh Quang Hưng</strong>
+                                    <small class="text-muted">.NET, Web API</small>
+                                    <div class="rating">
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <span class="ms-2">5.0</span>
+                                    </div>
+                                </div>
+                                <div class="teacher-stats">
+                                    <span class="badge bg-primary">5 lớp</span>
+                                    <span class="badge bg-success mt-1">120 SV</span>
+                                </div>
+                            </div>
+                            <div class="teacher-rating-item">
+                                <div class="teacher-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="teacher-details">
+                                    <strong>Đặng Hoàng Huy</strong>
+                                    <small class="text-muted">Python, AI, SQL</small>
+                                    <div class="rating">
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star-half-alt text-warning"></i>
+                                        <span class="ms-2">4.8</span>
+                                    </div>
+                                </div>
+                                <div class="teacher-stats">
+                                    <span class="badge bg-primary">4 lớp</span>
+                                    <span class="badge bg-success mt-1">95 SV</span>
+                                </div>
+                            </div>
+                            <div class="teacher-rating-item">
+                                <div class="teacher-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="teacher-details">
+                                    <strong>Nguyễn Thị Hường</strong>
+                                    <small class="text-muted">ReactJS, Frontend</small>
+                                    <div class="rating">
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="fas fa-star text-warning"></i>
+                                        <i class="far fa-star text-warning"></i>
+                                        <span class="ms-2">4.5</span>
+                                    </div>
+                                </div>
+                                <div class="teacher-stats">
+                                    <span class="badge bg-primary">3 lớp</span>
+                                    <span class="badge bg-success mt-1">78 SV</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment Tab -->
+    <div class="tab-pane fade" id="enrollment" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-column"></i> Thống Kê Ghi Danh Theo Tháng</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="enrollmentBarChart" style="height: 350px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finance Tab -->
+    <div class="tab-pane fade" id="finance" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Doanh Thu & Chi Phí</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="financeLineChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header bg-gradient-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-wallet"></i> Tài Chính Tháng Này</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="finance-summary">
+                            <div class="summary-item">
+                                <span class="label">Doanh thu</span>
+                                <span class="value text-success">+45,200,000 VNĐ</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Chi phí</span>
+                                <span class="value text-danger">-12,800,000 VNĐ</span>
+                            </div>
+                            <hr>
+                            <div class="summary-item">
+                                <span class="label fw-bold">Lợi nhuận</span>
+                                <span class="value fw-bold text-primary">32,400,000 VNĐ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Tab -->
+    <div class="tab-pane fade" id="performance" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Phân Bố Điểm Số</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Generate Report -->
+<div class="modal fade" id="generateReportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-file-alt"></i> Tạo Báo Cáo Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Loại Báo Cáo</label>
+                        <select class="form-select">
+                            <option>Báo cáo ghi danh</option>
+                            <option>Báo cáo tài chính</option>
+                            <option>Báo cáo kết quả học tập</option>
+                            <option>Báo cáo tổng hợp</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Khoảng Thời Gian</label>
+                        <select class="form-select">
+                            <option>Tháng này</option>
+                            <option>Tháng trước</option>
+                            <option>Quý này</option>
+                            <option>Năm nay</option>
+                            <option>Tùy chỉnh</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary">Tạo Báo Cáo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .report-overview-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .report-overview-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-students {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-revenue {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .card-classes {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+        }
+        
+        .card-completion {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .icon-section {
+            font-size: 45px;
+            opacity: 0.8;
+        }
+        
+        .content-section h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .content-section p {
+            margin: 5px 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .trend-up {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .trend-neutral {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        .report-tabs {
+            border-bottom: 2px solid #e3e6f0;
+            margin-bottom: 0;
+        }
+        
+        .report-tabs .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+            padding: 12px 20px;
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .report-tabs .nav-link:hover {
+            color: var(--primary-color);
+        }
+        
+        .report-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background: transparent;
+        }
+        
+        .report-tab-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .popular-courses-list, .teacher-rating-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .course-rank-item, .teacher-rating-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .course-rank-item:hover, .teacher-rating-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--primary-color);
+        }
+        
+        .rank-badge {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .rank-1 .rank-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #fff;
+        }
+        
+        .rank-2 .rank-badge {
+            background: linear-gradient(135deg, #C0C0C0, #A8A8A8);
+            color: #fff;
+        }
+        
+        .rank-3 .rank-badge {
+            background: linear-gradient(135deg, #CD7F32, #B8860B);
+            color: #fff;
+        }
+        
+        .course-info {
+            flex: 1;
+        }
+        
+        .teacher-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .teacher-details {
+            flex: 1;
+        }
+        
+        .teacher-details strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .teacher-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .rating {
+            margin-top: 5px;
+        }
+        
+        .finance-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-item .label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .summary-item .value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .bg-gradient-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+    </style>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sample chart initialization (you can replace with real data)
+        $(document).ready(function() {
+            // Enrollment Trend Chart
+            const enrollmentCtx = document.getElementById('enrollmentTrendChart');
+            if (enrollmentCtx) {
+                new Chart(enrollmentCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+                        datasets: [{
+                            label: 'Số sinh viên ghi danh',
+                            data: [45, 52, 68, 72, 85, 92],
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.4
+                        }]
+                    }
+                });
+            }
+            
+            // Course Pie Chart
+            const courseCtx = document.getElementById('coursePieChart');
+            if (courseCtx) {
+                new Chart(courseCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Python AI', 'Web API', 'ReactJS', 'SQL', 'C#'],
+                        datasets: [{
+                            data: [85, 72, 65, 48, 42],
+                            backgroundColor: ['#667eea', '#11998e', '#fc4a1a', '#4facfe', '#f093fb']
+                        }]
+                    }
+                });
+            }
+        });
+    </script>
+}
