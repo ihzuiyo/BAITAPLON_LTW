@@ -1,0 +1,157 @@
+﻿@model IEnumerable<StudentManagement.Models.Tuition>
+@{
+    ViewData["Title"] = "Học Phí";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-money-bill-wave"></i> Quản Lý Học Phí</h1>
+    <div class="header-actions">
+        <button class="btn btn-success">
+            <i class="fas fa-file-invoice"></i> Lịch Sử Thanh Toán
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        @foreach (var tuition in Model)
+        {
+            var remaining = tuition.TotalFee - tuition.AmountPaid;
+            var percentPaid = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
+            
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@tuition.Enrollment.Class.ClassName - @tuition.Enrollment.Class.Course.CourseName</h5>
+                    <span class="badge @(tuition.Status == "Paid" ? "bg-success" : tuition.Status == "Pending" ? "bg-warning" : "bg-danger")">
+                        @tuition.Status
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Tổng Học Phí:</strong> @tuition.TotalFee.ToString("N0") VNĐ</p>
+                            <p><strong>Đã Đóng:</strong> @tuition.AmountPaid.ToString("N0") VNĐ</p>
+                            <p><strong>Còn Lại:</strong> <span class="text-danger">@remaining.ToString("N0") VNĐ</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Hạn Đóng:</strong> @tuition.DueDate?.ToString("dd/MM/yyyy")</p>
+                            @if (tuition.DueDate.HasValue && tuition.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now && remaining > 0)
+                            {
+                                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Quá hạn</p>
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar @(percentPaid == 100 ? "bg-success" : "bg-primary")" 
+                             role="progressbar" 
+                             style="width: @percentPaid%" 
+                             aria-valuenow="@percentPaid" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            @percentPaid.ToString("F0")%
+                        </div>
+                    </div>
+                    
+                    @if (remaining > 0)
+                    {
+                        <button class="btn btn-primary">
+                            <i class="fas fa-credit-card"></i> Thanh Toán
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Hướng Dẫn Thanh Toán
+            </div>
+            <div class="card-body">
+                <h6>Thông Tin Chuyển Khoản:</h6>
+                <p><strong>Ngân hàng:</strong> Vietcombank</p>
+                <p><strong>Số tài khoản:</strong> 0123456789</p>
+                <p><strong>Chủ tài khoản:</strong> Trung Tâm Tin Học Classe369</p>
+                <p><strong>Nội dung:</strong> MSSV + Họ Tên</p>
+                
+                <hr>
+                
+                <h6>Lưu Ý:</h6>
+                <ul class="small">
+                    <li>Vui lòng ghi rõ mã sinh viên trong nội dung chuyển khoản</li>
+                    <li>Học phí sẽ được cập nhật sau 1-2 giờ làm việc</li>
+                    <li>Liên hệ phòng kế toán nếu có thắc mắc</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Lịch Sử Gần Đây
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-date">15/01/2025</div>
+                        <div class="timeline-content">
+                            <strong>Thanh toán 2,000,000 VNĐ</strong>
+                            <p class="small text-muted mb-0">Lập Trình Web - Kỳ 1/2025</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">10/01/2025</div>
+                        <div class="timeline-content">
+                            <strong>Thanh toán 1,500,000 VNĐ</strong>
+                            <p class="small text-muted mb-0">Cơ Sở Dữ Liệu - Kỳ 1/2025</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e3e6f0;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #5DADE2;
+            border: 2px solid #fff;
+        }
+        
+        .timeline-date {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+    </style>
+}

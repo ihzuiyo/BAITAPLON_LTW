@@ -1,0 +1,241 @@
+﻿@model StudentManagement.Models.ViewModels.RegisterViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng Ký - Classe369</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box auth-box-large">
+            <div class="auth-form-container">
+                <button type="button" class="btn-close-modal" onclick="window.location.href='@Url.Action("Login", "Account")'">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <h2 class="auth-title">ĐĂNG KÝ TÀI KHOẢN</h2>
+
+                <!-- Progress Steps -->
+                <div class="registration-steps">
+                    <div class="step-item active" data-step="1">
+                        <div class="step-number">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="step-label">Thông Tin Cơ Bản</div>
+                    </div>
+                    <div class="step-item" data-step="2">
+                        <div class="step-number">
+                            <i class="fas fa-address-card"></i>
+                        </div>
+                        <div class="step-label">Thông Tin Liên Hệ</div>
+                    </div>
+                    <div class="step-item" data-step="3">
+                        <div class="step-number">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <div class="step-label">Tài Khoản</div>
+                    </div>
+                    <div class="step-item" data-step="4">
+                        <div class="step-number">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="step-label">Hoàn Tất</div>
+                    </div>
+                </div>
+
+                <form asp-action="Register" method="post" class="auth-form multi-step-form" id="registerForm">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input type="hidden" asp-for="CurrentStep" id="currentStep" />
+
+                    <!-- Step 1: Basic Info -->
+                    <div class="form-step active" data-step="1">
+                        <h4 class="step-title">Thông Tin Cơ Bản</h4>
+                        
+                        <div class="form-group mb-3">
+                            <label asp-for="FullName" class="form-label required">Họ và Tên</label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nguyễn Văn A" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Email" class="form-label required">Email</label>
+                            <input asp-for="Email" class="form-control" type="email" placeholder="example@email.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="PhoneNumber" class="form-label required">Số Điện Thoại</label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="0123456789" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            <small class="form-text text-muted">Định dạng: 0XXXXXXXXX hoặc +84XXXXXXXXX</small>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Contact Info -->
+                    <div class="form-step" data-step="2">
+                        <h4 class="step-title">Thông Tin Liên Hệ</h4>
+                        
+                        <div class="row">
+                            <div class="col-md-6 form-group mb-3">
+                                <label asp-for="DateOfBirth" class="form-label">Ngày Sinh</label>
+                                <input asp-for="DateOfBirth" class="form-control" type="date" />
+                                <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 form-group mb-3">
+                                <label asp-for="Gender" class="form-label">Giới Tính</label>
+                                <select asp-for="Gender" class="form-select">
+                                    <option value="">-- Chọn giới tính --</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Address" class="form-label">Địa Chỉ</label>
+                            <textarea asp-for="Address" class="form-control" rows="3" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Account Info -->
+                    <div class="form-step" data-step="3">
+                        <h4 class="step-title">Thông Tin Tài Khoản</h4>
+                        
+                        <div class="form-group mb-3">
+                            <label asp-for="Username" class="form-label required">Tên Đăng Nhập</label>
+                            <input asp-for="Username" class="form-control" placeholder="username123" />
+                            <span asp-validation-for="Username" class="text-danger small"></span>
+                            <small class="form-text text-muted">Chỉ sử dụng chữ, số và dấu gạch dưới (3-50 ký tự)</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Password" class="form-label required">Mật Khẩu</label>
+                            <div class="password-input-group">
+                                <input asp-for="Password" type="password" class="form-control" id="registerPassword" placeholder="Nhập mật khẩu" />
+                                <button type="button" class="btn-toggle-password" onclick="togglePassword('registerPassword', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                            <small class="form-text text-muted">Tối thiểu 6 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt</small>
+                            
+                            <!-- Password Strength Indicator -->
+                            @* <div class="password-strength mt-2">
+                                <div class="password-strength-bar">
+                                    <div class="password-strength-fill" id="passwordStrength"></div>
+                                </div>
+                                <small class="password-strength-text" id="passwordStrengthText"></small>
+                            </div> *@
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label required">Xác Nhận Mật Khẩu</label>
+                            <div class="password-input-group">
+                                <input asp-for="ConfirmPassword" type="password" class="form-control" id="confirmPassword" placeholder="Nhập lại mật khẩu" />
+                                <button type="button" class="btn-toggle-password" onclick="togglePassword('confirmPassword', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Submit -->
+                    <div class="form-step" data-step="4">
+                        <h4 class="step-title">Xác Nhận Thông Tin</h4>
+                        
+                        <div class="registration-summary">
+                            <div class="summary-item">
+                                <strong>Họ và Tên:</strong>
+                                <span id="summaryFullName"></span>
+                            </div>
+                            <div class="summary-item">
+                                <strong>Email:</strong>
+                                <span id="summaryEmail"></span>
+                            </div>
+                            <div class="summary-item">
+                                <strong>Số Điện Thoại:</strong>
+                                <span id="summaryPhone"></span>
+                            </div>
+                            <div class="summary-item">
+                                <strong>Tên Đăng Nhập:</strong>
+                                <span id="summaryUsername"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="AgreeToTerms" class="form-check-input" type="checkbox" />
+                            <label asp-for="AgreeToTerms" class="form-check-label">
+                                Tôi đồng ý với <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Điều khoản sử dụng</a> và <a href="#">Chính sách bảo mật</a>
+                            </label>
+                            <span asp-validation-for="AgreeToTerms" class="text-danger small d-block"></span>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="form-navigation">
+                        <button type="button" class="btn btn-secondary btn-prev" id="prevBtn" style="display: none;">
+                            <i class="fas fa-arrow-left"></i> Quay Lại
+                        </button>
+                        <button type="button" class="btn btn-primary btn-next" id="nextBtn">
+                            Tiếp Theo <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success btn-submit" id="submitBtn" style="display: none;">
+                            <i class="fas fa-check"></i> Hoàn Tất Đăng Ký
+                        </button>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <span class="text-muted">Đã có tài khoản? </span>
+                        <a asp-action="Login" class="signup-link">Đăng nhập ngay</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms Modal -->
+    <div class="modal fade" id="termsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Điều Khoản Sử Dụng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>1. Chấp nhận điều khoản</h6>
+                    <p>Bằng việc đăng ký và sử dụng dịch vụ của Classe369, bạn đồng ý tuân thủ các điều khoản và điều kiện sau...</p>
+                    
+                    <h6>2. Quyền và trách nhiệm</h6>
+                    <p>Người dùng có trách nhiệm bảo mật thông tin tài khoản và chịu trách nhiệm về mọi hoạt động dưới tên tài khoản của mình...</p>
+                    
+                    <h6>3. Chính sách bảo mật</h6>
+                    <p>Chúng tôi cam kết bảo vệ thông tin cá nhân của bạn và chỉ sử dụng cho mục đích quản lý và cung cấp dịch vụ...</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="acceptTerms()">Đồng Ý</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/auth.js" asp-append-version="true"></script>
+    <script src="~/js/register.js" asp-append-version="true"></script>
+</body>
+</html>

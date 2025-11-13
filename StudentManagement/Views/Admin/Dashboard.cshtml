@@ -1,0 +1,149 @@
+﻿@{
+    ViewData["Title"] = "Tổng Quan";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-chart-line"></i> Tổng Quan Hệ Thống</h1>
+    <p class="page-subtitle">Xin chào, quản trị viên! Đây là tổng quan về hệ thống quản lý sinh viên.</p>
+</div>
+
+<div class="row dashboard-stats">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalStudents</div>
+                    <div class="stat-label">Sinh Viên</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Students" class="view-details">Xem chi tiết <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalClasses</div>
+                    <div class="stat-label">Lớp Học</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Classes" class="view-details">Xem chi tiết <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalCourses</div>
+                    <div class="stat-label">Khóa Học</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Courses" class="view-details">Xem chi tiết <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-red">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalUsers</div>
+                    <div class="stat-label">Người Dùng</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Users" class="view-details">Xem chi tiết <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-area"></i> Thống Kê Ghi Danh
+            </div>
+            <div class="card-body">
+                <canvas id="enrollmentChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bell"></i> Thông Báo Gần Đây
+            </div>
+            <div class="card-body notification-list">
+                <div class="notification-item">
+                    <i class="fas fa-info-circle text-info"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Học kỳ mới bắt đầu vào ngày 15/01/2025</p>
+                        <small class="text-muted">2 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-exclamation-circle text-warning"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Nhắc nhở thu học phí kỳ 1</p>
+                        <small class="text-muted">5 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Đã cập nhật 50 sinh viên mới</p>
+                        <small class="text-muted">1 ngày trước</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Công Việc Cần Làm
+            </div>
+            <div class="card-body">
+                <div class="quick-actions">
+                    <a asp-action="Students" class="quick-action-btn">
+                        <i class="fas fa-plus-circle"></i> Thêm Sinh Viên Mới
+                    </a>
+                    <a asp-action="Classes" class="quick-action-btn">
+                        <i class="fas fa-plus-circle"></i> Tạo Lớp Học Mới
+                    </a>
+                    <a asp-action="Notifications" class="quick-action-btn">
+                        <i class="fas fa-paper-plane"></i> Gửi Thông Báo
+                    </a>
+                    <a asp-action="Reports" class="quick-action-btn">
+                        <i class="fas fa-file-export"></i> Xuất Báo Cáo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

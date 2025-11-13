@@ -1,0 +1,118 @@
+﻿@model StudentManagement.Models.ViewModels.LoginViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng Nhập - Classe369</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="row g-0">
+                <!-- Left Side - Welcome Image -->
+                <div class="col-md-6 auth-left">
+                    <div class="welcome-content">
+                        <div class="logo-section">
+                            <i class="fas fa-graduation-cap logo-icon"></i>
+                            <h2 class="brand-name">CLASSE369</h2>
+                            <p class="brand-tagline">Trung Tâm Tin Học</p>
+                        </div>
+                        <h3 class="welcome-title">Chào Mừng Trở Lại!</h3>
+                        <p class="welcome-text">Đăng nhập để kết nối với hành trình học tập của bạn</p>
+                        <div class="welcome-image">
+                            <i class="fas fa-laptop-code fa-10x"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side - Login Form -->
+                <div class="col-md-6 auth-right">
+                    <div class="auth-form-container">
+                        <button type="button" class="btn-close-modal" onclick="window.location.href='@Url.Action("Index", "Home")'">
+                            <i class="fas fa-times"></i>
+                        </button>
+
+                        <h2 class="auth-title">ĐĂNG NHẬP</h2>
+
+                        @if (TempData["SuccessMessage"] != null)
+                        {
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                @TempData["SuccessMessage"]
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        }
+
+                        @if (TempData["InfoMessage"] != null)
+                        {
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                @TempData["InfoMessage"]
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        }
+
+                        <form asp-action="Login" method="post" class="auth-form">
+                            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="UsernameOrEmail" class="form-label">
+                                    <i class="fas fa-user"></i> Email hoặc Tên đăng nhập
+                                </label>
+                                <input asp-for="UsernameOrEmail" class="form-control" placeholder="Nhập email hoặc tên đăng nhập" autocomplete="username" />
+                                <span asp-validation-for="UsernameOrEmail" class="text-danger small"></span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="Password" class="form-label">
+                                    <i class="fas fa-lock"></i> Mật khẩu
+                                </label>
+                                <div class="password-input-group">
+                                    <input asp-for="Password" type="password" class="form-control" id="loginPassword" placeholder="Nhập mật khẩu" autocomplete="current-password" />
+                                    <button type="button" class="btn-toggle-password" onclick="togglePassword('loginPassword', this)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Password" class="text-danger small"></span>
+                            </div>
+
+                            <div class="form-group mb-3 d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input asp-for="RememberMe" class="form-check-input" type="checkbox" />
+                                    <label asp-for="RememberMe" class="form-check-label">
+                                        Ghi nhớ đăng nhập
+                                    </label>
+                                </div>
+                                <a asp-action="ForgotPassword" class="forgot-password-link">
+                                    Quên mật khẩu?
+                                </a>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-login w-100 mb-3">
+                                <i class="fas fa-sign-in-alt"></i> Đăng Nhập
+                            </button>
+
+                            <div class="text-center">
+                                <span class="text-muted">Chưa có tài khoản? </span>
+                                <a asp-action="Register" class="signup-link">Đăng ký ngay</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/auth.js" asp-append-version="true"></script>
+</body>
+</html>

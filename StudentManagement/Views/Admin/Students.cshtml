@@ -1,0 +1,120 @@
+﻿@model IEnumerable<StudentManagement.Models.Student>
+@{
+    ViewData["Title"] = "Quản Lý Sinh Viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-user-graduate"></i> Quản Lý Sinh Viên</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class="fas fa-plus"></i> Thêm Sinh Viên
+        </button>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-controls mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchStudent" placeholder="Tìm kiếm theo mã SV, tên, email...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterStatus">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Đang học">Đang học</option>
+                        <option value="Bảo lưu">Bảo lưu</option>
+                        <option value="Tốt nghiệp">Tốt nghiệp</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="entriesPerPage">
+                        <option value="10">10 dòng/trang</option>
+                        <option value="25">25 dòng/trang</option>
+                        <option value="50">50 dòng/trang</option>
+                        <option value="100">100 dòng/trang</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>Mã SV</th>
+                        <th>Họ và Tên</th>
+                        <th>Ngày Sinh</th>
+                        <th>Giới Tính</th>
+                        <th>Email</th>
+                        <th>Số Điện Thoại</th>
+                        <th>Trạng Thái</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var student in Model)
+                    {
+                        var statusName = student.Status?.StatusName ?? "Không xác định";
+                        var badgeClass = statusName == "Đang học" ? "bg-success" : 
+                                        statusName == "Bảo lưu" ? "bg-warning" : 
+                                        statusName == "Tốt nghiệp" ? "bg-info" : 
+                                        "bg-secondary";
+                        
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
+                            <td><strong>@student.StudentCode</strong></td>
+                            <td>@student.FullName</td>
+                            <td>@student.DateOfBirth?.ToString("dd/MM/yyyy")</td>
+                            <td>@student.Gender</td>
+                            <td>@student.Email</td>
+                            <td>@student.PhoneNumber</td>
+                            <td>
+                                <span class="badge @badgeClass">
+                                    @statusName
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <nav>
+                <ul class="pagination justify-content-end">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Trước</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
