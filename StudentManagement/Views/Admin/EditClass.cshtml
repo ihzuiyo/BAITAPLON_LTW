@@ -1,0 +1,83 @@
+﻿@model StudentManagement.Models.Class
+@{
+    ViewData["Title"] = "Chỉnh Sửa Lớp Học";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var courses = ViewBag.Courses as List<StudentManagement.Models.Course>;
+    var teachers = ViewBag.Teachers as List<StudentManagement.Models.Teacher>;
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Lớp Học: @Model.ClassName</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form asp-action="EditClass" asp-controller="Admin" method="post">
+            @Html.AntiForgeryToken()
+            @* Trường ẩn ClassId để nhận biết lớp học đang chỉnh sửa *@
+            <input type="hidden" asp-for="ClassId" />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ClassCode" class="form-label">Mã Lớp <span class="text-danger">*</span></label>
+                    <input asp-for="ClassCode" class="form-control" required />
+                    <span asp-validation-for="ClassCode" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ClassName" class="form-label">Tên Lớp <span class="text-danger">*</span></label>
+                    <input asp-for="ClassName" class="form-control" required />
+                    <span asp-validation-for="ClassName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="CourseId" class="form-label">Khóa Học <span class="text-danger">*</span></label>
+                    <select asp-for="CourseId" class="form-select" required>
+                        @foreach (var course in courses)
+                        {
+                            <option value="@course.CourseId">@course.CourseName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CourseId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="TeacherId" class="form-label">Giảng Viên</label>
+                    <select asp-for="TeacherId" class="form-select">
+                        <option value="">-- Chọn giảng viên --</option>
+                        @foreach (var teacher in teachers)
+                        {
+                            <option value="@teacher.TeacherId">@teacher.FirstName @teacher.LastName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="TeacherId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="MaxStudents" class="form-label">Sĩ Số Tối Đa</label>
+                    <input asp-for="MaxStudents" type="number" class="form-control" min="1" max="100" />
+                    <span asp-validation-for="MaxStudents" class="text-danger"></span>
+                </div>
+            </div>
+
+            <hr />
+            <div class="form-actions text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Thay Đổi
+                </button>
+                <a asp-action="Classes" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
