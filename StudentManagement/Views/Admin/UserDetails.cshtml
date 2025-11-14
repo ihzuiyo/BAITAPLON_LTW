@@ -1,0 +1,141 @@
+﻿@model StudentManagement.Models.User
+@{
+    ViewData["Title"] = "Chi Tiết Người Dùng: " + (Model.FullName ?? Model.Username);
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var teacherInfo = ViewBag.TeacherInfo as StudentManagement.Models.Teacher;
+    var studentInfo = ViewBag.StudentInfo as StudentManagement.Models.Student;
+    var enrollments = ViewBag.Enrollments as List<StudentManagement.Models.Enrollment>;
+
+    var statusBadge = Model.Status == "Active" ? "bg-success" : "bg-danger";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-user-circle"></i> Chi Tiết Người Dùng: @(Model.FullName ?? Model.Username)</h1>
+    <div class="header-actions">
+        <a asp-action="Users" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Danh sách Người dùng
+        </a>
+        <a asp-action="EditUser" asp-route-id="@Model.UserId" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Chỉnh Sửa Tài Khoản
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white"><i class="fas fa-id-card"></i> Thông Tin Tài Khoản</div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">ID Người Dùng:</dt>
+                    <dd class="col-sm-7"><strong class="text-primary">#@Model.UserId</strong></dd>
+
+                    <dt class="col-sm-5">Username:</dt>
+                    <dd class="col-sm-7">@Model.Username</dd>
+
+                    <dt class="col-sm-5">Họ và Tên:</dt>
+                    <dd class="col-sm-7"><strong>@(Model.FullName ?? "Chưa cập nhật")</strong></dd>
+
+                    <dt class="col-sm-5">Vai Trò:</dt>
+                    <dd class="col-sm-7"><span class="badge @(Model.Role?.RoleName == "Admin" ? "bg-danger" : Model.Role?.RoleName == "Teacher" ? "bg-primary" : "bg-info")">@Model.Role?.RoleName</span></dd>
+
+                    <dt class="col-sm-5">Trạng Thái:</dt>
+                    <dd class="col-sm-7"><span class="badge @statusBadge">@Model.Status</span></dd>
+
+                    <dt class="col-sm-5">Email:</dt>
+                    <dd class="col-sm-7">@Model.Email</dd>
+
+                    <dt class="col-sm-5">Số ĐT:</dt>
+                    <dd class="col-sm-7">@(Model.PhoneNumber ?? "N/A")</dd>
+
+                    <dt class="col-sm-5">Ngày Tạo:</dt>
+                    <dd class="col-sm-7">@Model.DateCreated.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+                <hr />
+                <a asp-action="ChangePassword" asp-route-id="@Model.UserId" class="btn btn-warning btn-sm">
+                    <i class="fas fa-key"></i> Đổi Mật Khẩu
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        @* --- THÔNG TIN GIẢNG VIÊN --- *@
+        @if (teacherInfo != null)
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-info text-white"><i class="fas fa-chalkboard-teacher"></i> Thông Tin Giảng Viên</div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Mã GV:</dt>
+                        <dd class="col-sm-8"><strong>@teacherInfo.TeacherCode</strong></dd>
+                        <dt class="col-sm-4">Chuyên Môn:</dt>
+                        <dd class="col-sm-8">@teacherInfo.Specialization</dd>
+                        <dt class="col-sm-4">Email Liên Hệ:</dt>
+                        <dd class="col-sm-8">@teacherInfo.Email</dd>
+                    </dl>
+                </div>
+            </div>
+        }
+
+        @* --- THÔNG TIN SINH VIÊN --- *@
+        @if (studentInfo != null)
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-success text-white"><i class="fas fa-user-graduate"></i> Thông Tin Sinh Viên</div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Mã SV:</dt>
+                        <dd class="col-sm-8"><strong>@studentInfo.StudentCode</strong></dd>
+                        <dt class="col-sm-4">Ngày Sinh:</dt>
+                        <dd class="col-sm-8">@studentInfo.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+                        <dt class="col-sm-4">Trạng Thái SV:</dt>
+                        <dd class="col-sm-8">@studentInfo.Status?.StatusName</dd>
+                        <dt class="col-sm-4">Địa Chỉ:</dt>
+                        <dd class="col-sm-8">@studentInfo.Address</dd>
+                    </dl>
+                </div>
+            </div>
+
+            @* --- DANH SÁCH LỚP HỌC ĐÃ GHI DANH --- *@
+            @if (enrollments != null && enrollments.Any())
+            {
+                <div class="card shadow">
+                    <div class="card-header bg-secondary text-white"><i class="fas fa-list-alt"></i> Các Lớp Đã Ghi Danh</div>
+                    <div class="card-body">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mã Lớp</th>
+                                    <th>Khóa Học</th>
+                                    <th>Ngày Ghi Danh</th>
+                                    <th>Trạng Thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var enrollment in enrollments)
+                                {
+                                    <tr>
+                                        <td>@enrollment.Class?.ClassCode</td>
+                                        <td>@enrollment.Class?.Course?.CourseName</td>
+                                        <td>@enrollment.EnrollmentDate.ToString("dd/MM/yyyy")</td>
+                                        <td><span class="badge bg-primary">@enrollment.Status</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+
+        @* Nếu không phải GV/SV *@
+        @if (teacherInfo == null && studentInfo == null)
+        {
+            <div class="alert alert-warning shadow">
+                <i class="fas fa-exclamation-triangle"></i> Tài khoản này chỉ là tài khoản hệ thống (không liên kết với bảng Sinh viên hoặc Giảng viên).
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,83 @@
+﻿@model StudentManagement.Models.User
+@{
+    ViewData["Title"] = "Chỉnh Sửa Người Dùng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var roles = ViewBag.Roles as List<StudentManagement.Models.Role>;
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Người Dùng: @(Model.FullName ?? Model.Username)</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form asp-action="EditUser" asp-controller="Admin" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="UserId" />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="FullName" class="form-label"><i class="fas fa-user"></i> Họ và Tên <span class="text-danger">*</span></label>
+                    <input asp-for="FullName" class="form-control" required />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Username" class="form-label"><i class="fas fa-at"></i> Username <span class="text-danger">*</span></label>
+                    <input asp-for="Username" class="form-control" required />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Email" class="form-label"><i class="fas fa-envelope"></i> Email <span class="text-danger">*</span></label>
+                    <input asp-for="Email" type="email" class="form-control" required />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PhoneNumber" class="form-label"><i class="fas fa-phone"></i> Số Điện Thoại</label>
+                    <input asp-for="PhoneNumber" type="tel" class="form-control" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="RoleId" class="form-label"><i class="fas fa-user-tag"></i> Vai Trò <span class="text-danger">*</span></label>
+                    <select asp-for="RoleId" class="form-select" required>
+                        <option value="">-- Chọn vai trò --</option>
+                        @foreach (var role in roles)
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="RoleId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Status" class="form-label"><i class="fas fa-toggle-on"></i> Trạng Thái</label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="Active">Hoạt động</option>
+                        <option value="Inactive">Không hoạt động</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-actions text-end mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Thay Đổi
+                </button>
+                <a asp-action="Users" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

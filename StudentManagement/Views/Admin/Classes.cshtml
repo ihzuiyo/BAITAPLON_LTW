@@ -13,9 +13,10 @@
         <button class="btn btn-success">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
-        <button class="btn btn-info">
-            <i class="fas fa-calendar-alt"></i> Xem Lịch
-        </button>
+        @* Sửa nút Xem Lịch thành thẻ <a> trỏ đến Action GeneralSchedule *@
+        <a asp-action="GeneralSchedule" asp-controller="Admin" class="btn btn-info">
+            <i class="fas fa-calendar-alt"></i> Xem Lịch Tổng Quan
+        </a>
     </div>
 </div>
 
@@ -202,21 +203,29 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" title="Chi tiết lớp">
+                                    @* Nút Chi Tiết: Trỏ đến AdminController.ClassDetails và truyền ClassId *@
+                                    <a asp-action="ClassDetails" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-info" title="Chi tiết lớp">
                                         <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                    </a>
+                                    @* Nút Chỉnh sửa: Liên kết đến EditClass (GET) *@
+                                    <a asp-action="EditClass" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-primary" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-success" title="Danh sách sinh viên">
+                                    </a>
+                                    @* Nút Danh sách sinh viên: Liên kết đến AdminController.ClassStudents *@
+                                    <a asp-action="ClassStudents" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-success" title="Danh sách sinh viên">
                                         <i class="fas fa-users"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Lịch học">
+                                    </a>
+                                    @* Nút Lịch học: Liên kết đến AdminController.ClassSchedule *@
+                                    <a asp-action="ClassSchedule" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-warning" title="Lịch học">
                                         <i class="fas fa-calendar-alt"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Xóa">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    </a>
+                                    @* Nút Xóa: Dùng form POST để đảm bảo an toàn *@
+                                    <form asp-action="DeleteClass" asp-route-id="@classItem.ClassId" asp-controller="Admin" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa lớp học @classItem.ClassName không? Thao tác này có thể ảnh hưởng đến dữ liệu liên quan.');" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -259,22 +268,28 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addClassForm">
+                @* Sửa thẻ form để gọi Action CreateClass *@
+                <form id="addClassForm" asp-controller="Admin" asp-action="CreateClass" method="post">
+                    @Html.AntiForgeryToken()
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-barcode"></i> Mã Lớp <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Ví dụ: CS101.K25" required>
+                            @* Thêm thuộc tính 'name' = "ClassCode" *@
+                            <input type="text" class="form-control" name="ClassCode" placeholder="Ví dụ: CS101.K25" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-tag"></i> Tên Lớp <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Ví dụ: Lập trình C# K25" required>
+                            @* Thêm thuộc tính 'name' = "ClassName" *@
+                            <input type="text" class="form-control" name="ClassName" placeholder="Ví dụ: Lập trình C# K25" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-book"></i> Khóa Học <span class="text-danger">*</span></label>
-                            <select class="form-select" required>
+                            @* Thêm thuộc tính 'name' = "CourseId" *@
+                            <select class="form-select" name="CourseId" required>
                                 <option value="">-- Chọn khóa học --</option>
+                                @* Dữ liệu được lấy từ Model của trang Index *@
                                 @foreach (var course in Model.Select(c => c.Course).Distinct())
                                 {
                                     <option value="@course.CourseId">@course.CourseName</option>
@@ -283,8 +298,10 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-chalkboard-teacher"></i> Giảng Viên</label>
-                            <select class="form-select">
+                            @* Thêm thuộc tính 'name' = "TeacherId" *@
+                            <select class="form-select" name="TeacherId">
                                 <option value="">-- Chọn giảng viên --</option>
+                                @* Dữ liệu được lấy từ Model của trang Index *@
                                 @foreach (var teacher in Model.Where(c => c.Teacher != null).Select(c => c.Teacher).Distinct())
                                 {
                                     <option value="@teacher.TeacherId">@teacher.FirstName @teacher.LastName</option>
@@ -295,7 +312,8 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-users"></i> Sĩ Số Tối Đa</label>
-                            <input type="number" class="form-control" value="30" min="1" max="100">
+                            @* Thêm thuộc tính 'name' = "MaxStudents" *@
+                            <input type="number" class="form-control" name="MaxStudents" value="30" min="1" max="100">
                         </div>
                     </div>
                 </form>
@@ -304,7 +322,8 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-primary">
+                @* Button Lưu sẽ submit form *@
+                <button type="submit" form="addClassForm" class="btn btn-primary">
                     <i class="fas fa-save"></i> Lưu Lớp Học
                 </button>
             </div>

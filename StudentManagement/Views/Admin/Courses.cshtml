@@ -13,9 +13,10 @@
         <button class="btn btn-success">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
-        <button class="btn btn-info">
+        @* Sửa nút Thống Kê thành thẻ <a> trỏ đến Action CourseStatistics *@
+        <a asp-action="CourseStatistics" asp-controller="Admin" class="btn btn-info">
             <i class="fas fa-chart-pie"></i> Thống Kê
-        </button>
+        </a>
     </div>
 </div>
 
@@ -181,18 +182,25 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                    @* Chi tiết *@
+                                    <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn btn-sm btn-info" title="Chi tiết">
                                         <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                    </a>
+                                    @* Chỉnh sửa *@
+                                    <a asp-action="EditCourse" asp-route-id="@course.CourseId" class="btn btn-sm btn-primary" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-success" title="Xem lớp học">
+                                    </a>
+                                    @* Xem lớp học (Giả định Action là ClassesByCourse) *@
+                                    <a asp-action="Classes" asp-route-courseId="@course.CourseId" class="btn btn-sm btn-success" title="Xem lớp học">
                                         <i class="fas fa-list-alt"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Xóa">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    </a>
+                                    @* Xóa *@
+                                    <form asp-action="DeleteCourse" asp-route-id="@course.CourseId" asp-controller="Admin" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khóa học @course.CourseName không? Việc này có thể ảnh hưởng đến các lớp học liên quan!');" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -241,12 +249,14 @@
                                 <span><i class="fas fa-user-graduate"></i> @studentCount học viên</span>
                             </div>
                             <div class="footer-actions">
-                                <button class="btn btn-sm btn-outline-primary">
+                                @* Chi tiết *@
+                                <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-primary" title="Chi tiết">
                                     <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-success">
+                                </a>
+                                @* Chỉnh sửa *@
+                                <a asp-action="EditCourse" asp-route-id="@course.CourseId" class="btn btn-sm btn-outline-success" title="Chỉnh sửa">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -288,29 +298,34 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addCourseForm">
+                <form id="addCourseForm" asp-controller="Admin" asp-action="CreateCourse" method="post">
+                    @Html.AntiForgeryToken()
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-barcode"></i> Mã Khóa Học <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Ví dụ: CSHARP-101" required>
+                            <input type="text" class="form-control" name="CourseCode" placeholder="Ví dụ: CSHARP-101" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-tag"></i> Tên Khóa Học <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Ví dụ: Lập trình C# nâng cao" required>
+                            <input type="text" class="form-control" name="CourseName" placeholder="Ví dụ: Lập trình C# nâng cao" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-align-left"></i> Mô Tả</label>
-                        <textarea class="form-control" rows="3" placeholder="Mô tả về khóa học..."></textarea>
+                        <textarea class="form-control" rows="3" name="Description" placeholder="Mô tả về khóa học..."></textarea>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label"><i class="fas fa-clock"></i> Thời Lượng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Ví dụ: 3 tháng" required>
+                            <input type="text" class="form-control" name="Duration" placeholder="Ví dụ: 3 tháng" required>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label"><i class="fas fa-dollar-sign"></i> Học Phí (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" placeholder="Ví dụ: 3500000" required>
+                            <input type="number" class="form-control" name="TuitionFee" placeholder="Ví dụ: 3500000" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-credit-card"></i> Credits</label>
+                            <input type="number" class="form-control" name="Credits" placeholder="Ví dụ: 3">
                         </div>
                     </div>
                 </form>
@@ -319,7 +334,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-primary">
+                <button type="submit" form="addCourseForm" class="btn btn-primary">
                     <i class="fas fa-save"></i> Lưu Khóa Học
                 </button>
             </div>

@@ -1,0 +1,116 @@
+﻿@model StudentManagement.Models.Course
+@{
+    ViewData["Title"] = "Chi Tiết Khóa Học: " + Model.CourseName;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var totalClasses = Model.Classes.Count;
+    var totalStudents = Model.Classes.Sum(c => c.Enrollments.Count);
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-info-circle"></i> Chi Tiết Khóa Học: @Model.CourseName</h1>
+    <div class="header-actions">
+        <a asp-action="Courses" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Danh sách Khóa học
+        </a>
+        <a asp-action="EditCourse" asp-route-id="@Model.CourseId" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Chỉnh Sửa
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white"><i class="fas fa-book-open"></i> Thông Tin Khóa Học</div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">Mã Khóa:</dt>
+                    <dd class="col-sm-7"><span class="badge bg-secondary fs-6">@Model.CourseCode</span></dd>
+
+                    <dt class="col-sm-5">Tên Khóa Học:</dt>
+                    <dd class="col-sm-7"><strong>@Model.CourseName</strong></dd>
+
+                    <dt class="col-sm-5">Học Phí:</dt>
+                    <dd class="col-sm-7">
+                        <strong class="text-success">@Model.TuitionFee.ToString("N0") VNĐ</strong>
+                    </dd>
+
+                    <dt class="col-sm-5">Thời Lượng:</dt>
+                    <dd class="col-sm-7">@Model.Duration</dd>
+
+                    <dt class="col-sm-5">Số Credits:</dt>
+                    <dd class="col-sm-7">@Model.Credits</dd>
+
+                    <dt class="col-sm-5">Tổng Lớp Đang Mở:</dt>
+                    <dd class="col-sm-7"><span class="badge bg-info">@totalClasses</span></dd>
+
+                    <dt class="col-sm-5">Tổng Học Viên:</dt>
+                    <dd class="col-sm-7"><span class="badge bg-warning text-dark">@totalStudents</span></dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-secondary text-white"><i class="fas fa-align-left"></i> Mô Tả Khóa Học</div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <p>@Model.Description</p>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic">Khóa học này chưa có mô tả chi tiết.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-chalkboard"></i> Các Lớp Đang Mở (@totalClasses lớp)
+            </div>
+            <div class="card-body">
+                @if (Model.Classes.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mã Lớp</th>
+                                    <th>Tên Lớp</th>
+                                    <th>Giảng Viên</th>
+                                    <th>Sĩ Số</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var classItem in Model.Classes.OrderBy(c => c.ClassCode))
+                                {
+                                    var enrollmentCount = classItem.Enrollments?.Count ?? 0;
+                                    var maxStudents = classItem.MaxStudents ?? 0;
+                                    <tr>
+                                        <td>@classItem.ClassCode</td>
+                                        <td>@classItem.ClassName</td>
+                                        <td>@(classItem.Teacher != null ? $"{classItem.Teacher.FirstName} {classItem.Teacher.LastName}" : "Chưa phân công")</td>
+                                        <td>@enrollmentCount/@maxStudents</td>
+                                        <td>
+                                            <a asp-action="ClassDetails" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-outline-info" title="Chi tiết Lớp">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">Chưa có lớp học nào được mở cho khóa học này.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

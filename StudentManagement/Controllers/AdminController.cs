@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
 using StudentManagement.Attributes;
-
+using StudentManagement.Models.ViewModels;
 namespace StudentManagement.Controllers
 {
     [AuthorizeRole("Admin")]
@@ -44,26 +44,683 @@ namespace StudentManagement.Controllers
         public async Task<IActionResult> Classes()
         {
             var classes = await _context.Classes
+            .Include(c => c.Course)          // Cần cho CourseName, CourseId (đã có)
+            .Include(c => c.Teacher)         // Cần cho Tên Giảng viên (đã có)
+
+            // >>> CẦN THÊM CÁC INCLUDE NÀY <<<
+            .Include(c => c.Enrollments)     // Cần để tính:
+                                         // 1. Số lượng Sinh viên đã Ghi danh (@Model.Sum(c => c.Enrollments.Count))
+                                         // 2. Sĩ số đã đăng ký (@enrollmentCount/@maxStudents)
+            .Include(c => c.ClassSchedules)  // Cần để hiển thị Lịch học (@classItem.ClassSchedules.Any())
+
+            .ToListAsync();
+
+            return View(classes);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken] // Luôn nên có để bảo mật
+        public async Task<IActionResult> CreateClass([Bind("CourseId,TeacherId,ClassCode,ClassName,MaxStudents")] Class newClass)
+        {
+            // Loại bỏ các Navigation Properties khỏi kiểm tra ModelState 
+            // vì chúng không được gửi từ form (giúp ModelState.IsValid chính xác hơn)
+            ModelState.Remove("Course");
+            ModelState.Remove("Teacher");
+            ModelState.Remove("Enrollments");
+            ModelState.Remove("ClassSchedules");
+
+            // Kiểm tra tính hợp lệ của dữ liệu cơ bản
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    // Thiết lập giá trị mặc định nếu MaxStudents không được nhập
+                    if (newClass.MaxStudents == null || newClass.MaxStudents <= 0)
+                    {
+                        newClass.MaxStudents = 30;
+                    }
+
+                    _context.Add(newClass);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = $"Đã tạo lớp **{newClass.ClassName}** thành công.";
+
+                    // Chuyển hướng về trang danh sách lớp học
+                    return RedirectToAction(nameof(Classes));
+                }
+                catch (DbUpdateException)
+                {
+                    // Xử lý lỗi trùng mã lớp (ClassCode là UNIQUE) hoặc lỗi CSDL khác
+                    TempData["ErrorMessage"] = "Lỗi: Không thể lưu lớp học. Mã Lớp (ClassCode) có thể đã bị trùng.";
+                    return RedirectToAction(nameof(Classes));
+                }
+            }
+
+            // Nếu Model không hợp lệ (ví dụ: thiếu ClassCode, ClassName), chuyển hướng về trang và hiển thị lỗi
+            TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc (Mã lớp, Tên lớp, Khóa học).";
+            return RedirectToAction(nameof(Classes));
+        }
+
+        // GET: /Admin/GeneralSchedule
+        public async Task<IActionResult> GeneralSchedule()
+        {
+            // Lấy tất cả lịch học của tất cả các lớp
+            var allSchedules = await _context.ClassSchedules
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Course) // Bao gồm Khóa học
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Teacher) // Bao gồm Giảng viên
+                .Include(cs => cs.Room) // Bao gồm Phòng học
+                                        // Sắp xếp theo ngày trong tuần và giờ bắt đầu để dễ nhìn
+                .OrderBy(cs => cs.Weekday)
+                .ThenBy(cs => cs.StartTime)
+                .ToListAsync();
+
+            // Model sẽ là IEnumerable<ClassSchedule>
+            return View(allSchedules);
+        }
+        // Thêm Action Chi Tiết Lớp Học
+        public async Task<IActionResult> ClassDetails(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            // Lấy chi tiết lớp học cùng với tất cả các thông tin liên quan
+            var classItem = await _context.Classes
+                .Where(c => c.ClassId == id)
+                .Include(c => c.Course)             // Khóa học
+                .Include(c => c.Teacher)            // Giảng viên
+                .Include(c => c.ClassSchedules)     // Lịch học
+                    .ThenInclude(cs => cs.Room)     // Phòng học
+                .Include(c => c.Enrollments)        // Danh sách ghi danh
+                    .ThenInclude(e => e.Student)    // Thông tin sinh viên
+                        .ThenInclude(s => s.Status) // Trạng thái sinh viên
+                .FirstOrDefaultAsync();
+
+            if (classItem == null)
+            {
+                return NotFound();
+            }
+
+            return View(classItem);
+        }
+        // GET: /Admin/EditClass/5
+        public async Task<IActionResult> EditClass(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            // Lấy lớp học cần chỉnh sửa, bao gồm Course và Teacher
+            var classItem = await _context.Classes
+                .Include(c => c.Course)
+                .FirstOrDefaultAsync(m => m.ClassId == id);
+
+            if (classItem == null)
+            {
+                return NotFound();
+            }
+
+            // Lấy danh sách Courses và Teachers để đổ vào Dropdown List trong View
+            ViewBag.Courses = await _context.Courses.ToListAsync();
+            ViewBag.Teachers = await _context.Teachers.ToListAsync();
+
+            // Sẽ cần tạo View EditClass.cshtml trong Views/Admin/Classes/
+            return View(classItem);
+        }
+
+        // POST: /Admin/EditClass
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditClass(int ClassId, [Bind("ClassId,CourseId,TeacherId,ClassCode,ClassName,MaxStudents")] Class classToUpdate)
+        {
+            if (ClassId != classToUpdate.ClassId)
+            {
+                return NotFound();
+            }
+
+            // Kiểm tra tính hợp lệ của Model
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    // Attach và cập nhật trạng thái Entity
+                    _context.Update(classToUpdate);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã cập nhật lớp **{classToUpdate.ClassName}** thành công.";
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!_context.Classes.Any(e => e.ClassId == classToUpdate.ClassId))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        // Xử lý lỗi trùng lặp mã lớp nếu cần
+                        TempData["ErrorMessage"] = "Cập nhật thất bại. Lớp học đã được chỉnh sửa bởi người khác hoặc Mã Lớp bị trùng.";
+                        return RedirectToAction(nameof(Classes));
+                    }
+                }
+                return RedirectToAction(nameof(Classes));
+            }
+
+            // Nếu Model không hợp lệ, load lại danh sách Course/Teacher và trả về View
+            ViewBag.Courses = await _context.Courses.ToListAsync();
+            ViewBag.Teachers = await _context.Teachers.ToListAsync();
+            return View(classToUpdate);
+        }
+        // GET: /Admin/ClassStudents/5
+        public async Task<IActionResult> ClassStudents(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            // 1. Lấy thông tin lớp học (để hiển thị tiêu đề)
+            var classItem = await _context.Classes
+                .Include(c => c.Course)
+                .FirstOrDefaultAsync(c => c.ClassId == id);
+
+            if (classItem == null)
+            {
+                return NotFound();
+            }
+
+            // 2. Lấy danh sách ghi danh (Enrollments)
+            // Bao gồm cả thông tin Student, Status, và Scores/ScoreTypes
+            var enrollments = await _context.Enrollments
+                .Where(e => e.ClassId == id)
+                .Include(e => e.Student)
+                    .ThenInclude(s => s.Status) // Trạng thái sinh viên
+                .Include(e => e.Scores)
+                    .ThenInclude(s => s.ScoreType) // Loại điểm (Chuyên cần, Giữa kỳ...)
+                .ToListAsync();
+
+            // 3. Đưa dữ liệu vào ViewModel hoặc ViewBag (Ở đây dùng ViewBag để đơn giản hóa)
+            ViewBag.ClassItem = classItem;
+
+            // Model sẽ là IEnumerable<Enrollment>
+            return View(enrollments);
+        }
+        // GET: /Admin/ClassSchedule/5
+        public async Task<IActionResult> ClassSchedule(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            // 1. Lấy thông tin lớp học (để hiển thị tiêu đề và thông tin cơ bản)
+            var classItem = await _context.Classes
                 .Include(c => c.Course)
                 .Include(c => c.Teacher)
+                .FirstOrDefaultAsync(c => c.ClassId == id);
+
+            if (classItem == null)
+            {
+                return NotFound();
+            }
+
+            // 2. Lấy danh sách lịch học (ClassSchedules)
+            // Cần Include Room để lấy tên phòng học
+            var schedules = await _context.ClassSchedules
+                .Where(cs => cs.ClassId == id)
+                .Include(cs => cs.Room)
+                .OrderBy(cs => cs.Weekday) // Sắp xếp theo ngày trong tuần (có thể cần logic sắp xếp tùy chỉnh)
                 .ToListAsync();
-            return View(classes);
+
+            // 3. Đưa dữ liệu vào ViewBag và View
+            ViewBag.ClassItem = classItem;
+            // Model sẽ là IEnumerable<ClassSchedule>
+            return View(schedules);
+        }
+        // ====================================================================
+        // 2. CHỨC NĂNG XÓA (DELETE)
+        // ====================================================================
+
+        // POST: /Admin/DeleteClass/5
+        [HttpPost, ActionName("DeleteClass")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteClassConfirmed(int id)
+        {
+            var classItem = await _context.Classes
+                // Lớp học có thể liên kết với Enrollments, ClassSchedules, v.v.
+                // Cần đảm bảo CSDL có thiết lập CASCADE DELETE hoặc xóa thủ công các bản ghi con
+                .FirstOrDefaultAsync(c => c.ClassId == id);
+
+            if (classItem == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy lớp học cần xóa.";
+                return RedirectToAction(nameof(Classes));
+            }
+
+            try
+            {
+                _context.Classes.Remove(classItem);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã xóa lớp **{classItem.ClassName}** thành công.";
+            }
+            catch (DbUpdateException ex)
+            {
+                // Xử lý lỗi ràng buộc khóa ngoại (Foreign Key Constraint)
+                TempData["ErrorMessage"] = "Xóa lớp thất bại. Lớp học này đang có sinh viên ghi danh hoặc lịch học liên quan. Cần xóa dữ liệu liên quan trước.";
+                // Bạn có thể log ex.Message ở đây để debug
+            }
+
+            return RedirectToAction(nameof(Classes));
         }
 
         // Courses Management
         public async Task<IActionResult> Courses()
         {
-            var courses = await _context.Courses.ToListAsync();
+            var courses = await _context.Courses
+            .Include(c => c.Classes)
+            .ThenInclude(cl => cl.Enrollments) // Cần Enrollments để tính Tổng Học Viên
+            .ToListAsync();
+
             return View(courses);
         }
+        // POST: /Admin/CreateCourse
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateCourse([Bind("CourseCode,CourseName,Description,Duration,TuitionFee,Credits")] Course newCourse)
+        {
+            // ModelState.Remove("Classes"); // Không cần nếu không có thuộc tính Classes trong Bind
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Add(newCourse);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã tạo khóa học **{newCourse.CourseName}** thành công.";
+                    return RedirectToAction(nameof(Courses));
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Lỗi: Mã Khóa Học (CourseCode) đã tồn tại hoặc dữ liệu không hợp lệ.";
+                    return RedirectToAction(nameof(Courses));
+                }
+            }
+
+            TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại.";
+            return RedirectToAction(nameof(Courses));
+        }
+        // GET: /Admin/CourseStatistics
+        public async Task<IActionResult> CourseStatistics()
+        {
+            // Lấy tất cả Khóa học và các dữ liệu liên quan cần thiết cho thống kê
+            var coursesWithStats = await _context.Courses
+                .Include(c => c.Classes)
+                    .ThenInclude(cl => cl.Enrollments)
+                .Select(c => new CourseStatViewModel // Sử dụng ViewModel để truyền dữ liệu thống kê
+                {
+                    CourseId = c.CourseId,
+                    CourseName = c.CourseName,
+                    CourseCode = c.CourseCode,
+                    TuitionFee = c.TuitionFee,
+                    TotalClasses = c.Classes.Count,
+                    TotalStudents = c.Classes.Sum(cl => cl.Enrollments.Count),
+                    // Tính toán doanh thu ước tính (Chỉ mang tính chất tham khảo: Học phí * Số HV)
+                    EstimatedRevenue = c.TuitionFee * c.Classes.Sum(cl => cl.Enrollments.Count)
+                })
+                .OrderByDescending(vm => vm.TotalStudents)
+                .ToListAsync();
+
+            // Bạn cần định nghĩa class CourseStatViewModel trong thư mục Models/ViewModels
+            return View(coursesWithStats);
+        }
+        // GET: /Admin/CourseDetails/5
+        public async Task<IActionResult> CourseDetails(int id)
+        {
+            var course = await _context.Courses
+                .Include(c => c.Classes) // Có thể muốn xem các lớp đang mở
+                    .ThenInclude(cl => cl.Teacher)
+                .FirstOrDefaultAsync(m => m.CourseId == id);
+
+            if (course == null) return NotFound();
+
+            return View(course); // Cần tạo View CourseDetails.cshtml
+        }
+        // GET: /Admin/EditCourse/5
+        public async Task<IActionResult> EditCourse(int id)
+        {
+            var course = await _context.Courses.FindAsync(id);
+            if (course == null) return NotFound();
+
+            return View(course); // Cần tạo View EditCourse.cshtml
+        }
+
+        // POST: /Admin/EditCourse/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditCourse(int CourseId, [Bind("CourseId,CourseCode,CourseName,Description,Duration,TuitionFee,Credits")] Course courseToUpdate)
+        {
+            if (CourseId != courseToUpdate.CourseId) return NotFound();
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(courseToUpdate);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã cập nhật khóa học **{courseToUpdate.CourseName}** thành công.";
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!_context.Courses.Any(e => e.CourseId == courseToUpdate.CourseId)) return NotFound();
+                    throw;
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Cập nhật thất bại. Mã Khóa Học (CourseCode) có thể bị trùng.";
+                }
+                return RedirectToAction(nameof(Courses));
+            }
+            return View(courseToUpdate);
+        }
+        // POST: /Admin/DeleteCourse/5
+        [HttpPost, ActionName("DeleteCourse")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCourseConfirmed(int id)
+        {
+            var course = await _context.Courses.FindAsync(id);
+
+            if (course == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy khóa học cần xóa.";
+                return RedirectToAction(nameof(Courses));
+            }
+
+            try
+            {
+                _context.Courses.Remove(course);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã xóa khóa học **{course.CourseName}** thành công.";
+            }
+            catch (DbUpdateException)
+            {
+                // Khóa học có thể còn lớp (Classes) liên quan.
+                TempData["ErrorMessage"] = "Xóa khóa học thất bại. Vẫn còn lớp học đang sử dụng khóa học này. Vui lòng xóa các lớp liên quan trước.";
+            }
+
+            return RedirectToAction(nameof(Courses));
+        }
+
 
         // Users Management
         public async Task<IActionResult> Users()
         {
             var users = await _context.Users
-                .Include(u => u.Role)
-                .ToListAsync();
+            .Include(u => u.Role)
+            .ToListAsync();
+
+            // Lấy danh sách Roles cho Modal
+            ViewBag.Roles = await _context.Roles.ToListAsync();
+
             return View(users);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateUser(CreateUserViewModel model)
+        {
+            // Giả sử bạn có một dịch vụ/hàm để Hash mật khẩu, ví dụ: HashPassword(model.Password)
+            // (Trong môi trường thực tế, bạn sẽ dùng ASP.NET Identity hoặc thư viện như BCrypt)
+
+            // Kiểm tra cơ bản
+            if (model.Password != model.ConfirmPassword)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu và Xác nhận mật khẩu không khớp.";
+                return RedirectToAction(nameof(Users));
+            }
+
+            if (ModelState.IsValid)
+            {
+                var newUser = new User
+                {
+                    RoleId = model.RoleId,
+                    Username = model.Username,
+                    // PasswordHash = HashPassword(model.Password), // Cần hash mật khẩu
+                    PasswordHash = model.Password, // Tạm thời lưu thô để demo (CẦN SỬA ĐỂ BẢO MẬT)
+                    FullName = model.FullName,
+                    Email = model.Email,
+                    PhoneNumber = model.PhoneNumber,
+                    Status = model.Status,
+                    DateCreated = DateTime.Now
+                };
+
+                try
+                {
+                    _context.Add(newUser);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã tạo người dùng **{model.Username}** thành công.";
+                }
+                catch (DbUpdateException)
+                {
+                    // Xử lý lỗi trùng Username/Email (UNIQUE Constraint)
+                    TempData["ErrorMessage"] = "Lỗi: Username hoặc Email đã tồn tại trong hệ thống.";
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại.";
+            }
+
+            return RedirectToAction(nameof(Users));
+        }
+
+        // GET: /Admin/UserDetails/5
+        public async Task<IActionResult> UserDetails(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            // 1. Lấy thông tin tài khoản cơ bản
+            var user = await _context.Users
+                .Where(u => u.UserId == id)
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // 2. Lấy thông tin chi tiết liên quan (Giảng viên hoặc Sinh viên)
+
+            // Nếu là Giảng viên
+            var teacherInfo = await _context.Teachers
+                .FirstOrDefaultAsync(t => t.UserId == id);
+            if (teacherInfo != null)
+            {
+                ViewBag.TeacherInfo = teacherInfo;
+            }
+
+            // Nếu là Sinh viên
+            var studentInfo = await _context.Students
+                .Include(s => s.Status)
+                .FirstOrDefaultAsync(s => s.UserId == id);
+            if (studentInfo != null)
+            {
+                ViewBag.StudentInfo = studentInfo;
+
+                // Tùy chọn: Lấy danh sách lớp mà sinh viên này đang học
+                var enrollments = await _context.Enrollments
+                    .Where(e => e.StudentId == studentInfo.StudentId)
+                    .Include(e => e.Class)
+                        .ThenInclude(c => c.Course)
+                    .ToListAsync();
+                ViewBag.Enrollments = enrollments;
+            }
+
+            // Model là đối tượng User
+            return View(user);
+        }
+        // GET: /Admin/EditUser/5
+        public async Task<IActionResult> EditUser(int id)
+        {
+            if (id <= 0) return NotFound();
+
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == id);
+
+            if (user == null) return NotFound();
+
+            // Lấy danh sách Roles cho dropdown
+            ViewBag.Roles = await _context.Roles.ToListAsync();
+
+            // Model sẽ là đối tượng User
+            return View(user);
+        }
+
+        // Action cho việc đổi trạng thái (Kích hoạt/Vô hiệu hóa) - Được gọi bằng POST
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+      
+        public async Task<IActionResult> ToggleUserStatus(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy người dùng.";
+                return RedirectToAction(nameof(Users));
+            }
+
+            // Kiểm tra trạng thái hiện tại (sử dụng chuỗi tiếng Việt)
+            if (user.Status == "Active")
+            {
+                user.Status = "Inactive";
+            }
+            else
+            {
+                user.Status = "Active";
+            }
+
+            try
+            {
+                _context.Update(user);
+                await _context.SaveChangesAsync();
+
+                // Cập nhật thông báo phản hồi (sử dụng chuỗi tiếng Việt)
+                TempData["SuccessMessage"] = $"Đã {(user.Status == "Active" ? "kích hoạt" : "vô hiệu hóa")} người dùng {user.Username} thành công.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "Lỗi khi cập nhật trạng thái người dùng.";
+            }
+
+            return RedirectToAction(nameof(Users));
+        }
+
+        // B. Action `EditUser` (POST)
+        // POST: /Admin/EditUser/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        // Chỉ bind các trường được phép chỉnh sửa
+        public async Task<IActionResult> EditUser(int UserId, [Bind("UserId,RoleId,Username,FullName,Email,PhoneNumber,Status")] User userToUpdate)
+        {
+            if (UserId != userToUpdate.UserId) return NotFound();
+
+            // Chúng ta không cho phép chỉnh sửa mật khẩu qua form này (dùng action riêng)
+            // Và không cho phép chỉnh sửa DateCreated
+            ModelState.Remove("PasswordHash");
+            ModelState.Remove("DateCreated");
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    // Lấy User gốc từ DB để giữ lại PasswordHash và DateCreated
+                    var originalUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == UserId);
+                    if (originalUser == null) return NotFound();
+
+                    // Cập nhật các trường được thay đổi
+                    userToUpdate.PasswordHash = originalUser.PasswordHash; // Giữ lại mật khẩu cũ
+                    userToUpdate.DateCreated = originalUser.DateCreated;   // Giữ lại ngày tạo
+
+                    _context.Update(userToUpdate);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã cập nhật thông tin người dùng **{userToUpdate.Username}** thành công.";
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Cập nhật thất bại. Username hoặc Email có thể đã bị trùng.";
+                }
+                return RedirectToAction(nameof(Users));
+            }
+
+            // Nếu lỗi, load lại Roles và trả về View
+            ViewBag.Roles = await _context.Roles.ToListAsync();
+            return View(userToUpdate);
+        }
+        // GET: /Admin/ChangePassword/5
+        public async Task<IActionResult> ChangePassword(int id)
+        {
+            if (id <= 0)
+            {
+                return NotFound();
+            }
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Chúng ta chỉ cần thông tin cơ bản của user để hiển thị tên
+            // và dùng UserId để POST form
+            return View(user);
+        }
+
+        // B. Action `ChangePassword` (POST)
+        // POST: /Admin/ChangePassword/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        // Dùng ViewModel để lấy NewPassword và ConfirmPassword
+        public async Task<IActionResult> ChangePassword(int UserId, string NewPassword, string ConfirmPassword)
+        {
+            if (NewPassword != ConfirmPassword)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu mới và Xác nhận mật khẩu không khớp.";
+                return RedirectToAction(nameof(ChangePassword), new { id = UserId });
+            }
+
+            // Tùy chọn: Thêm kiểm tra độ mạnh mật khẩu (ví dụ: dài tối thiểu 6 ký tự)
+            if (string.IsNullOrEmpty(NewPassword) || NewPassword.Length < 6)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu phải có ít nhất 6 ký tự.";
+                return RedirectToAction(nameof(ChangePassword), new { id = UserId });
+            }
+
+            var user = await _context.Users.FindAsync(UserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                // TRONG THỰC TẾ, PHẢI HASH MẬT KHẨU Ở ĐÂY
+                // user.PasswordHash = HashPassword(NewPassword); 
+                user.PasswordHash = NewPassword; // Tạm thời lưu thô để demo
+
+                _context.Update(user);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã đổi mật khẩu cho người dùng **{user.Username}** thành công.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "Lỗi khi lưu mật khẩu mới vào cơ sở dữ liệu.";
+            }
+
+            return RedirectToAction(nameof(Users)); // Chuyển hướng về trang danh sách người dùng
         }
 
         // Tuitions Management

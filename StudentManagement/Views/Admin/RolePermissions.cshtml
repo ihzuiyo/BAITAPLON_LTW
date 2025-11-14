@@ -1,0 +1,94 @@
+﻿@model Dictionary<int, HashSet<int>>
+@{
+    ViewData["Title"] = "Phân Quyền Người Dùng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var roles = ViewBag.Roles as List<StudentManagement.Models.Role>;
+    var permissions = ViewBag.Permissions as List<StudentManagement.Models.Permission>;
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-user-lock"></i> Quản Lý Phân Quyền</h1>
+    <div class="header-actions">
+        <a asp-action="Users" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Quản lý Người dùng
+        </a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-warning text-dark">
+        <i class="fas fa-shield-alt"></i> Bảng Phân Quyền Chi Tiết
+    </div>
+    <div class="card-body">
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+
+        <form asp-action="UpdateRolePermissions" asp-controller="Admin" method="post">
+            @Html.AntiForgeryToken()
+
+            @if (roles != null && roles.Any() && permissions != null && permissions.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm table-fixed">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 20%;">Vai Trò</th>
+                                @foreach (var permission in permissions)
+                                {
+                                    <th title="@permission.Description" style="width: 10%;">@permission.PermissionName</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var role in roles)
+                            {
+                                // Không cho phép chỉnh sửa quyền của Admin (RoleId = 1)
+                                var isAdmin = role.RoleId == 1;
+
+                                <tr>
+                                    <td><strong>@role.RoleName</strong></td>
+                                    @foreach (var permission in permissions)
+                                    {
+                                        var isChecked = Model.ContainsKey(role.RoleId) && Model[role.RoleId].Contains(permission.PermissionId);
+                                        var checkboxName = $"Role_{role.RoleId}_Permission_{permission.PermissionId}";
+
+                                        <td>
+                                            @if (isAdmin)
+                                            {
+                                                // Nếu là Admin, luôn đánh dấu và khóa
+                                                <input type="checkbox" checked disabled />
+                                                <input type="hidden" name="@checkboxName" value="on" />
+                                            }
+                                            else
+                                            {
+                                                <input type="checkbox" name="@checkboxName" @(isChecked ? "checked" : "") />
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="fas fa-sync-alt"></i> Cập Nhật Phân Quyền
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">Chưa có dữ liệu Vai trò hoặc Quyền hạn.</div>
+            }
+        </form>
+    </div>
+</div>

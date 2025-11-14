@@ -14,7 +14,7 @@
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
         <button class="btn btn-warning">
-            <i class="fas fa-user-lock"></i> Phân Quyền
+            <i class="fas fa-file-excel"></i> Phân quyền
         </button>
     </div>
 </div>
@@ -214,27 +214,34 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                    @* Nút Chi tiết: Trỏ đến AdminController.UserDetails *@
+                                    <a asp-action="UserDetails" asp-route-id="@user.UserId" class="btn btn-sm btn-info" title="Chi tiết">
                                         <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                    </a>
+                                    @* Nút Chỉnh Sửa: Liên kết đến EditUser (GET) *@
+                                    <a asp-action="EditUser" asp-route-id="@user.UserId" class="btn btn-sm btn-primary" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Đổi mật khẩu">
+                                    </a>
+                                    @* Nút Đổi mật khẩu: Liên kết đến AdminController.ChangePassword (GET) *@
+                                    <a asp-action="ChangePassword" asp-route-id="@user.UserId" class="btn btn-sm btn-warning" title="Đổi mật khẩu">
                                         <i class="fas fa-key"></i>
-                                    </button>
-                                    @if (user.Status == "Active")
-                                    {
-                                        <button class="btn btn-sm btn-danger" title="Vô hiệu hóa">
-                                            <i class="fas fa-ban"></i>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-sm btn-success" title="Kích hoạt">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    }
+                                    </a>
+                                    @* Form cho chức năng Kích hoạt/Vô hiệu hóa *@
+                                    <form asp-action="ToggleUserStatus" asp-route-id="@user.UserId" asp-controller="Admin" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn @(user.Status == "Active" ? "vô hiệu hóa" : "kích hoạt") người dùng @user.Username không?');" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        @if (user.Status == "Active")
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Vô hiệu hóa">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-success" title="Kích hoạt">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        }
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -276,51 +283,67 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
             <div class="modal-body">
-                <form id="addUserForm">
+                @* TRỎ FORM ĐẾN ACTION CREATEUSER *@
+                <form id="addUserForm" asp-controller="Admin" asp-action="CreateUser" method="post">
+                    @Html.AntiForgeryToken()
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-user"></i> Họ và Tên <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Nhập họ và tên" required>
+                            <input type="text" class="form-control" name="FullName" placeholder="Nhập họ và tên" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-at"></i> Username <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Nhập username" required>
+                            <input type="text" class="form-control" name="Username" placeholder="Nhập username" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-envelope"></i> Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" placeholder="example@email.com" required>
+                            <input type="email" class="form-control" name="Email" placeholder="example@email.com" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-phone"></i> Số Điện Thoại</label>
-                            <input type="tel" class="form-control" placeholder="0xxxxxxxxx">
+                            <input type="tel" class="form-control" name="PhoneNumber" placeholder="0xxxxxxxxx">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-lock"></i> Mật Khẩu <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" placeholder="Nhập mật khẩu" required>
+                            <input type="password" class="form-control" name="Password" placeholder="Nhập mật khẩu" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-lock"></i> Xác Nhận Mật Khẩu <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" placeholder="Nhập lại mật khẩu" required>
+                            <input type="password" class="form-control" name="ConfirmPassword" placeholder="Nhập lại mật khẩu" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-user-tag"></i> Vai Trò <span class="text-danger">*</span></label>
-                            <select class="form-select" required>
+                            @* Dùng ViewBag.Roles để đổ dữ liệu *@
+                            <select class="form-select" name="RoleId" required>
                                 <option value="">-- Chọn vai trò --</option>
-                                <option value="1">Admin</option>
-                                <option value="2">Teacher</option>
-                                <option value="3">Student</option>
+                                @if (ViewBag.Roles is List<StudentManagement.Models.Role> roles)
+                                {
+                                    @foreach (var role in roles)
+                                    {
+                                        <option value="@role.RoleId">@role.RoleName</option>
+                                    }
+                                }
+                                else
+                                {
+                                    @* Fallback nếu không có ViewBag.Roles *@
+                                    <option value="1">Admin</option>
+                                    <option value="2">Teacher</option>
+                                    <option value="3">Student</option>
+                                }
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-toggle-on"></i> Trạng Thái</label>
-                            <select class="form-select">
+                            <select class="form-select" name="Status">
                                 <option value="Active" selected>Hoạt động</option>
                                 <option value="Inactive">Không hoạt động</option>
                             </select>
@@ -328,11 +351,12 @@
                     </div>
                 </form>
             </div>
+
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-primary">
+                <button type="submit" form="addUserForm" class="btn btn-primary">
                     <i class="fas fa-save"></i> Lưu Người Dùng
                 </button>
             </div>

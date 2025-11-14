@@ -17,5 +17,6 @@ public partial class Course
 
     public decimal TuitionFee { get; set; }
 
+    public int? Credits { get; set; }
     public virtual ICollection<Class> Classes { get; set; } = new List<Class>();
 }
