@@ -3,16 +3,32 @@
   "WorkspaceRootPath": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\controllers\\studentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:controllers\\studentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\views\\admin\\tuitions.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:views\\admin\\tuitions.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\models\\viewmodels\\registerviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:models\\viewmodels\\registerviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\views\\admin\\students.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:views\\admin\\students.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\views\\admin\\reports.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:views\\admin\\reports.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\views\\admin\\notifications.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:views\\admin\\notifications.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|d:\\fifth_semester\\web_programming_2024_student\\btl_2025\\btl_ltw\\baitaplon_ltw\\studentmanagement\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E1883DD6-028B-49BC-8D8E-27A3925D1F6F}|StudentManagement.csproj|solutionrelative:controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +38,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 9,
+          "SelectedChildIndex": 12,
           "Children": [
             {
               "$type": "Bookmark",
@@ -62,41 +78,93 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "StudentController.cs",
+              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\StudentController.cs",
+              "RelativeDocumentMoniker": "Controllers\\StudentController.cs",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\StudentController.cs",
+              "RelativeToolTip": "Controllers\\StudentController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-14T10:39:39.552Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Tuitions.cshtml",
+              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Tuitions.cshtml",
+              "RelativeDocumentMoniker": "Views\\Admin\\Tuitions.cshtml",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Tuitions.cshtml",
+              "RelativeToolTip": "Views\\Admin\\Tuitions.cshtml",
+              "ViewState": "AgIAALMAAAAAAAAAAAAUwM4AAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-14T10:28:53.406Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Students.cshtml",
+              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Students.cshtml",
+              "RelativeDocumentMoniker": "Views\\Admin\\Students.cshtml",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Students.cshtml",
+              "RelativeToolTip": "Views\\Admin\\Students.cshtml",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-13T13:55:14.709Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "AdminController.cs",
+              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\AdminController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AdminController.cs",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\AdminController.cs*",
+              "RelativeToolTip": "Controllers\\AdminController.cs*",
+              "ViewState": "AgIAADMAAAAAAAAAAAAkwFEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-13T06:39:43.077Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "RegisterViewModel.cs",
+              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Models\\ViewModels\\RegisterViewModel.cs",
+              "RelativeDocumentMoniker": "Models\\ViewModels\\RegisterViewModel.cs",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Models\\ViewModels\\RegisterViewModel.cs",
+              "RelativeToolTip": "Models\\ViewModels\\RegisterViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-13T14:05:00.499Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "Reports.cshtml",
               "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Reports.cshtml",
               "RelativeDocumentMoniker": "Views\\Admin\\Reports.cshtml",
-              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Reports.cshtml*",
-              "RelativeToolTip": "Views\\Admin\\Reports.cshtml*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Reports.cshtml",
+              "RelativeToolTip": "Views\\Admin\\Reports.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-11-13T06:45:39.362Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 6,
               "Title": "Notifications.cshtml",
               "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Notifications.cshtml",
               "RelativeDocumentMoniker": "Views\\Admin\\Notifications.cshtml",
-              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Notifications.cshtml*",
-              "RelativeToolTip": "Views\\Admin\\Notifications.cshtml*",
+              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Views\\Admin\\Notifications.cshtml",
+              "RelativeToolTip": "Views\\Admin\\Notifications.cshtml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEYCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-11-13T06:45:25.477Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AdminController.cs",
-              "DocumentMoniker": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\AdminController.cs",
-              "RelativeDocumentMoniker": "Controllers\\AdminController.cs",
-              "ToolTip": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\Controllers\\AdminController.cs",
-              "RelativeToolTip": "Controllers\\AdminController.cs",
-              "ViewState": "AgIAAEEAAAAAAAAAAAAUwFkAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-13T06:39:43.077Z",
               "EditorCaption": ""
             }
           ]
