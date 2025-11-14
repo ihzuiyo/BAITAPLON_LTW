@@ -1,0 +1,95 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    // Lấy ClassItem từ ViewBag
+    var classItem = ViewBag.ClassItem as StudentManagement.Models.Class;
+
+    ViewData["Title"] = "DSSV Lớp: " + classItem?.ClassName;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title">
+        <i class="fas fa-users-class"></i> Danh Sách Sinh Viên Lớp:
+        <strong>@classItem?.ClassName</strong> (@classItem?.ClassCode)
+    </h1>
+    <div class="header-actions">
+        <a asp-action="Classes" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Danh sách Lớp
+        </a>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-primary">
+            <i class="fas fa-plus"></i> Thêm Sinh Viên
+        </button>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-list"></i> Tổng số sinh viên: @Model.Count()
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Mã SV</th>
+                        <th>Họ Tên</th>
+                        <th>Email</th>
+                        <th>Ngày Ghi Danh</th>
+                        <th>Trạng Thái SV</th>
+                        <th>Điểm Số (Chi tiết)</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var enrollment in Model)
+                    {
+                        var student = enrollment.Student;
+                        <tr>
+                            <td><strong class="text-primary">@student.StudentCode</strong></td>
+                            <td>@student.FullName</td>
+                            <td><small>@student.Email</small></td>
+                            <td>@enrollment.EnrollmentDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <span class="badge bg-@(@student.Status?.StatusName == "Đang học" ? "success" : "warning")">
+                                    @student.Status?.StatusName
+                                </span>
+                            </td>
+                            <td>
+                                @if (enrollment.Scores != null && enrollment.Scores.Any())
+                                {
+                                    // Hiển thị điểm số chi tiết (Chuyên cần: 9.0, Giữa kỳ: 7.5, ...)
+                                    <small>
+                                        @string.Join(", ", enrollment.Scores.Select(s => $"{s.ScoreType.ScoreTypeName}: {s.ScoreValue}"))
+                                    </small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa có điểm</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-warning" title="Cập nhật điểm">
+                                        <i class="fas fa-file-signature"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Hủy ghi danh">
+                                        <i class="fas fa-user-times"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Có thể thêm script cho chức năng tìm kiếm, phân trang, hoặc AJAX ở đây
+    </script>
+}
