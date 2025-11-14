@@ -1,26 +1,79 @@
-﻿$(document).ready(function () {
-    // Sidebar collapse toggle
+﻿// ==========================================
+// ADMIN DASHBOARD JAVASCRIPT
+// ==========================================
+
+$(document).ready(function () {
+    console.log('🔧 Admin JS Loaded');
+
+    // ==========================================
+    // 1. SIDEBAR COLLAPSE FUNCTIONALITY
+    // ==========================================
     $('#sidebarCollapse').on('click', function () {
-        $('#sidebar').toggleClass('active');
-        $('#content').toggleClass('active');
+        $('#sidebar').toggleClass('collapsed');
+        $('#content').toggleClass('expanded');
+        
+        // Store collapse state in localStorage
+        const isCollapsed = $('#sidebar').hasClass('collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+        
+        // Change icon
+        $(this).find('i').toggleClass('fa-bars fa-times');
     });
 
-    // Select all checkbox
+    // Restore sidebar state from localStorage
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (sidebarCollapsed === 'true') {
+        $('#sidebar').addClass('collapsed');
+        $('#content').addClass('expanded');
+        $('#sidebarCollapse i').removeClass('fa-bars').addClass('fa-times');
+    }
+
+    // ==========================================
+    // 2. LOGOUT FUNCTIONALITY
+    // ==========================================
+    $('.logout-btn').on('click', function (e) {
+        e.preventDefault();
+        
+        // Show confirmation dialog
+        if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+            // Show loading state
+            const originalText = $(this).html();
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Đang đăng xuất...');
+            $(this).css('pointer-events', 'none');
+            
+            // Clear any stored data
+            localStorage.removeItem('sidebarCollapsed');
+            sessionStorage.clear();
+            
+            // Redirect to logout action
+            setTimeout(function () {
+                window.location.href = '/Account/Logout';
+            }, 500);
+        }
+    });
+
+    // ==========================================
+    // 3. SELECT ALL CHECKBOX
+    // ==========================================
     $('#selectAll').on('change', function () {
         $('.row-checkbox').prop('checked', this.checked);
     });
 
-    // Search functionality
+    // ==========================================
+    // 4. SEARCH FUNCTIONALITY
+    // ==========================================
     $('#searchStudent').on('keyup', function () {
-        var value = $(this).val().toLowerCase();
+        const value = $(this).val().toLowerCase();
         $(".data-table tbody tr").filter(function () {
-            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });
 
-    // Filter by status
+    // ==========================================
+    // 5. FILTER BY STATUS
+    // ==========================================
     $('#filterStatus').on('change', function () {
-        var status = $(this).val();
+        const status = $(this).val();
         if (status === '') {
             $('.data-table tbody tr').show();
         } else {
@@ -31,10 +84,12 @@
         }
     });
 
-    // Chart.js for enrollment chart (if Chart.js is included)
+    // ==========================================
+    // 6. ENROLLMENT CHART
+    // ==========================================
     if (typeof Chart !== 'undefined' && document.getElementById('enrollmentChart')) {
-        var ctx = document.getElementById('enrollmentChart').getContext('2d');
-        var enrollmentChart = new Chart(ctx, {
+        const ctx = document.getElementById('enrollmentChart').getContext('2d');
+        const enrollmentChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
@@ -44,7 +99,8 @@
                     backgroundColor: 'rgba(52, 152, 219, 0.2)',
                     borderColor: 'rgba(52, 152, 219, 1)',
                     borderWidth: 2,
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 }]
             },
             options: {
@@ -54,6 +110,10 @@
                     legend: {
                         display: true,
                         position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
                     }
                 },
                 scales: {
@@ -65,10 +125,27 @@
         });
     }
 
-    // Confirm delete
+    // ==========================================
+    // 7. CONFIRM DELETE
+    // ==========================================
     $('.btn-danger').on('click', function (e) {
-        if (!confirm('Bạn có chắc chắn muốn xóa?')) {
-            e.preventDefault();
+        if (!$(this).hasClass('confirm-delete')) {
+            if (!confirm('Bạn có chắc chắn muốn xóa?')) {
+                e.preventDefault();
+            }
         }
+    });
+
+    // ==========================================
+    // 8. AUTO-DISMISS ALERTS
+    // ==========================================
+    $('.alert').not('.alert-permanent').delay(5000).fadeOut('slow');
+
+    // ==========================================
+    // 9. TOOLTIPS INITIALIZATION
+    // ==========================================
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
