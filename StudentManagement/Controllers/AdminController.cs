@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
 using StudentManagement.Attributes;
@@ -70,9 +70,13 @@ namespace StudentManagement.Controllers
         public async Task<IActionResult> Tuitions()
         {
             var tuitions = await _context.Tuitions
-                .Include(t => t.Enrollment)
-                .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)           // 1. Tải Ghi danh (Enrollment)
+                    .ThenInclude(e => e.Student)    // 2. TỪ Ghi danh -> Tải Sinh viên (Student)
+                .Include(t => t.Enrollment)           // 1. Tải Ghi danh (Enrollment)
+                    .ThenInclude(e => e.Class)      // 3. TỪ Ghi danh -> Tải Lớp học (Class)
+                        .ThenInclude(c => c.Course) // 4. TỪ Lớp học -> Tải Khóa học (Course)
                 .ToListAsync();
+
             return View(tuitions);
         }
 

@@ -167,6 +167,11 @@
                 <tbody>
                     @foreach (var tuition in Model)
                     {
+                        if (tuition == null)
+                        {
+                            continue;
+                        }
+
                         var remaining = tuition.TotalFee - tuition.AmountPaid;
                         var percentage = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
                         var progressBarClass = percentage == 100 ? "bg-success" : percentage >= 50 ? "bg-info" : "bg-warning";
