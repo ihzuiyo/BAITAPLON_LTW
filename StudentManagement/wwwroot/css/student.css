@@ -1,14 +1,15 @@
-﻿/* Student Dashboard Styles */
+﻿/* Student Dashboard Styles - Enhanced */
 :root {
-    --primary-color: #5DADE2;
-    --secondary-color: #3498DB;
+    --primary-color: #3498DB;
+    --secondary-color: #2ECC71;
     --success-color: #27AE60;
     --warning-color: #F39C12;
     --danger-color: #E74C3C;
-    --info-color: #3498DB;
+    --info-color: #5DADE2;
     --dark-color: #2C3E50;
     --light-color: #ECF0F1;
     --sidebar-width: 260px;
+    --sidebar-collapsed-width: 80px;
 }
 
 body {
@@ -22,25 +23,101 @@ body {
     align-items: stretch;
 }
 
-/* Sidebar Styles */
+/* ==========================================
+   SIDEBAR STYLES
+   ========================================== */
 .sidebar {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
-    background: linear-gradient(135deg, var(--primary-color) 0%, #2E86C1 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
     color: #fff;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     position: fixed;
     height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     z-index: 1000;
 }
 
+/* Collapsed Sidebar */
+.sidebar.collapsed {
+    min-width: var(--sidebar-collapsed-width);
+    max-width: var(--sidebar-collapsed-width);
+}
+
+/* Hide text elements when collapsed */
+.sidebar.collapsed .sidebar-header h3,
+.sidebar.collapsed .sidebar-header .subtitle {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    display: none;
+}
+
+/* Center menu icons when collapsed */
+.sidebar.collapsed ul li a {
+    text-align: center;
+    padding: 15px 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed ul li a i {
+    margin-right: 0;
+    font-size: 22px;
+}
+
+/* Hide menu text when collapsed */
+.sidebar.collapsed ul li a span:not(.badge) {
+    display: none !important;
+    opacity: 0;
+    width: 0;
+    visibility: hidden;
+}
+
+/* Hide logout button text when collapsed */
+.sidebar.collapsed .logout-btn {
+    text-align: center;
+    padding: 15px 0;
+    font-size: 0;
+}
+
+.sidebar.collapsed .logout-btn i {
+    margin-right: 0;
+    font-size: 20px;
+}
+
+/* Alternative approach - hide span elements inside logout button */
+.sidebar.collapsed .logout-btn span {
+    display: none !important;
+    opacity: 0;
+    width: 0;
+    visibility: hidden;
+}
+
+.sidebar.collapsed .logo-container {
+    flex-direction: column;
+}
+
+.sidebar.collapsed .logo-icon {
+    margin-right: 0;
+}
+
+/* ==========================================
+   SIDEBAR HEADER
+   ========================================== */
 .sidebar-header {
     padding: 30px 20px;
     background: rgba(0,0,0,0.2);
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-header {
+    padding: 20px 10px;
 }
 
 .logo-container {
@@ -48,12 +125,14 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 10px;
+    transition: all 0.3s ease;
 }
 
 .logo-icon {
     font-size: 36px;
     margin-right: 10px;
-    color: #F4D03F;
+    color: var(--secondary-color);
+    transition: all 0.3s ease;
 }
 
 .sidebar-header h3 {
@@ -61,14 +140,19 @@ body {
     font-weight: 700;
     margin: 0;
     letter-spacing: 2px;
+    transition: all 0.3s ease;
 }
 
 .sidebar-header .subtitle {
     font-size: 13px;
     opacity: 0.8;
     margin: 5px 0 0 0;
+    transition: all 0.3s ease;
 }
 
+/* ==========================================
+   MENU ITEMS
+   ========================================== */
 .sidebar ul.components {
     padding: 20px 0;
 }
@@ -80,26 +164,34 @@ body {
 .sidebar ul li a {
     padding: 12px 25px;
     font-size: 15px;
-    display: block;
+    display: flex;
+    align-items: center;
     color: rgba(255,255,255,0.8);
     text-decoration: none;
     transition: all 0.3s;
     border-left: 3px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .sidebar ul li a i {
     margin-right: 12px;
     width: 20px;
     text-align: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .sidebar ul li a:hover,
 .sidebar ul li.active > a {
     color: #fff;
     background: rgba(255,255,255,0.1);
-    border-left-color: #F4D03F;
+    border-left-color: var(--secondary-color);
 }
 
+/* ==========================================
+   SIDEBAR FOOTER
+   ========================================== */
 .sidebar-footer {
     position: absolute;
     bottom: 0;
@@ -107,10 +199,17 @@ body {
     padding: 20px;
     background: rgba(0,0,0,0.2);
     border-top: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-footer {
+    padding: 20px 10px;
 }
 
 .logout-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 12px;
     background: rgba(231,76,60,0.8);
     color: #fff;
@@ -118,19 +217,74 @@ body {
     border-radius: 5px;
     text-decoration: none;
     transition: all 0.3s;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .logout-btn:hover {
     background: rgba(231,76,60,1);
     color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-/* Main Content */
+.logout-btn i {
+    margin-right: 8px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* ==========================================
+   TOOLTIP FOR COLLAPSED SIDEBAR
+   ========================================== */
+.sidebar.collapsed ul li a,
+.sidebar.collapsed .logout-btn {
+    position: relative;
+}
+
+.sidebar.collapsed ul li a:hover::after,
+.sidebar.collapsed .logout-btn:hover::after {
+    content: attr(data-title);
+    position: absolute;
+    left: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+    font-size: 14px;
+    z-index: 1001;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.sidebar.collapsed ul li a:hover::before,
+.sidebar.collapsed .logout-btn:hover::before {
+    content: '';
+    position: absolute;
+    left: 75px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(0,0,0,0.9);
+    z-index: 1001;
+    pointer-events: none;
+}
+
+/* ==========================================
+   MAIN CONTENT
+   ========================================== */
 #content {
     width: 100%;
     min-height: 100vh;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     margin-left: var(--sidebar-width);
+}
+
+#content.expanded {
+    margin-left: var(--sidebar-collapsed-width);
 }
 
 .top-navbar {
@@ -144,6 +298,12 @@ body {
     background: var(--primary-color);
     border: none;
     color: #fff;
+    transition: all 0.3s ease;
+}
+
+.top-navbar #sidebarCollapse:hover {
+    background: var(--dark-color);
+    transform: scale(1.05);
 }
 
 .user-info {
@@ -164,8 +324,13 @@ body {
     min-height: calc(100vh - 120px);
 }
 
-/* Dashboard Header */
+/* ==========================================
+   DASHBOARD COMPONENTS
+   ========================================== */
 .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 30px;
 }
 
@@ -184,7 +349,6 @@ body {
 .header-actions {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
 }
 
 /* Statistics Cards */
@@ -247,147 +411,13 @@ body {
 }
 
 .stat-card-red {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     color: #fff;
 }
 
-/* Class Grid */
-.class-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.class-card {
-    background: #fff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.3s;
-}
-
-.class-card:hover {
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    transform: translateY(-5px);
-}
-
-.class-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+.stat-card-teal {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     color: #fff;
-}
-
-.class-card-header h5 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.class-card-body {
-    padding: 15px 20px;
-}
-
-.class-card-body p {
-    margin: 8px 0;
-    font-size: 14px;
-    color: #6c757d;
-}
-
-.class-card-body i {
-    color: var(--primary-color);
-    margin-right: 8px;
-    width: 20px;
-}
-
-.class-card-footer {
-    padding: 15px 20px;
-    border-top: 1px solid #f0f0f0;
-    text-align: right;
-}
-
-/* Schedule */
-.schedule-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.schedule-item {
-    display: flex;
-    padding: 15px;
-    background: #f8f9fa;
-    border-left: 4px solid var(--primary-color);
-    border-radius: 5px;
-}
-
-.schedule-time {
-    min-width: 100px;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.schedule-info h6 {
-    margin: 0 0 5px 0;
-    font-weight: 600;
-}
-
-/* Notifications */
-.notification-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.notification-item {
-    display: flex;
-    padding: 15px;
-    border-bottom: 1px solid #f0f0f0;
-    transition: all 0.3s;
-}
-
-.notification-item:hover {
-    background-color: #f8f9fa;
-}
-
-.notification-item i {
-    font-size: 24px;
-    margin-right: 15px;
-}
-
-.notification-content {
-    flex: 1;
-}
-
-.notification-text {
-    margin: 0 0 5px 0;
-    font-size: 14px;
-}
-
-/* Score Table */
-.score-table {
-    margin-top: 20px;
-}
-
-.score-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    padding: 12px;
-}
-
-.score-table td {
-    padding: 12px;
-}
-
-.score-value {
-    font-size: 18px;
-    color: var(--primary-color);
-}
-
-.score-average {
-    font-size: 20px;
-    color: var(--success-color);
 }
 
 /* Cards */
@@ -396,6 +426,11 @@ body {
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .card-header {
@@ -416,18 +451,44 @@ body {
     color: #6c757d;
 }
 
-/* Responsive */
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.5);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
 @media (max-width: 768px) {
     .sidebar {
         margin-left: calc(-1 * var(--sidebar-width));
+    }
+
+    .sidebar.collapsed {
+        margin-left: 0;
     }
     
     #content {
         margin-left: 0;
     }
-    
-    .class-grid {
-        grid-template-columns: 1fr;
+
+    #content.expanded {
+        margin-left: var(--sidebar-collapsed-width);
     }
     
     .stat-card .card-body {
@@ -438,5 +499,25 @@ body {
     .stat-icon {
         margin-right: 0;
         margin-bottom: 15px;
+    }
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+@media print {
+    .sidebar,
+    .top-navbar,
+    .header-actions,
+    .footer {
+        display: none !important;
+    }
+    
+    #content {
+        margin-left: 0 !important;
+    }
+    
+    .main-content {
+        padding: 0 !important;
     }
 }

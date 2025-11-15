@@ -1,0 +1,817 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    ViewData["Title"] = "Trang Chủ Sinh Viên";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var student = ViewBag.Student as StudentManagement.Models.Student;
+    var totalClasses = ViewBag.TotalClasses ?? 0;
+    
+    var enrolledClasses = Model?.Count(e => e.Status == "Enrolled") ?? 0;
+    var completedClasses = Model?.Count(e => e.Status == "Completed") ?? 0;
+    var totalCredits = Model?.Sum(e => e.Class?.Course?.Credits ?? 0) ?? 0;
+    
+    // Calculate upcoming classes today
+    var today = DateTime.Now.DayOfWeek.ToString();
+    var upcomingToday = Model?.Where(e => e.Class?.ClassSchedules?.Any(s => s.Weekday == today) == true).ToList() ?? new List<StudentManagement.Models.Enrollment>();
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-home"></i> Xin Chào, @(student?.FullName ?? "Sinh Viên")!
+        </h1>
+        <p class="page-subtitle">
+            Chào mừng bạn quay trở lại hệ thống quản lý học tập. 
+            @if (student != null)
+            {
+                <span class="badge bg-primary ms-2">@student.StudentCode</span>
+            }
+        </p>
+    </div>
+    <div class="header-actions">
+        <a asp-action="Schedule" class="btn btn-info">
+            <i class="fas fa-calendar-alt"></i> Xem Lịch Học
+        </a>
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print"></i> In Báo Cáo
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row dashboard-stats mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@enrolledClasses</div>
+                    <div class="stat-label">Đang Học</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="MyClasses" class="view-details">
+                    Xem chi tiết <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@completedClasses</div>
+                    <div class="stat-label">Hoàn Thành</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">
+                    Đã hoàn thành <i class="fas fa-check-circle"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@totalCredits</div>
+                    <div class="stat-label">Tổng Tín Chỉ</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">
+                    Đã tích lũy <i class="fas fa-award"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@upcomingToday.Count</div>
+                    <div class="stat-label">Lớp Hôm Nay</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">
+                    Chuẩn bị học <i class="fas fa-clock"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- My Classes Overview -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chalkboard"></i> Lớp Học Của Tôi
+                    </h5>
+                    <span class="badge bg-primary">@enrolledClasses lớp đang học</span>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (Model != null && Model.Any())
+                {
+                    <div class="class-list">
+                        @foreach (var enrollment in Model.Where(e => e.Status == "Enrolled").Take(5))
+                        {
+                            var classItem = enrollment.Class;
+                            var course = classItem?.Course;
+                            var scheduleCount = classItem?.ClassSchedules?.Count ?? 0;
+                            var firstSchedule = classItem?.ClassSchedules?.FirstOrDefault();
+                            
+                            var weekdayVi = firstSchedule?.Weekday switch
+                            {
+                                "Monday" => "Thứ Hai",
+                                "Tuesday" => "Thứ Ba",
+                                "Wednesday" => "Thứ Tư",
+                                "Thursday" => "Thứ Năm",
+                                "Friday" => "Thứ Sáu",
+                                "Saturday" => "Thứ Bảy",
+                                "Sunday" => "Chủ Nhật",
+                                _ => "Chưa có lịch"
+                            };
+                            
+                            <div class="class-item">
+                                <div class="class-icon">
+                                    <i class="fas fa-book-reader"></i>
+                                </div>
+                                <div class="class-info">
+                                    <div class="class-name">
+                                        @classItem?.ClassName
+                                        <span class="class-code">@classItem?.ClassCode</span>
+                                    </div>
+                                    <p class="class-details mb-0">
+                                        <i class="fas fa-graduation-cap text-success"></i> 
+                                        <strong>Khóa học:</strong> @course?.CourseName<br />
+                                        
+                                        <i class="fas fa-calendar-alt text-primary"></i> 
+                                        <strong>Lịch học:</strong> 
+                                        @if (firstSchedule != null)
+                                        {
+                                            @weekdayVi @(" - ") @firstSchedule.StartTime.ToString("HH:mm")
+                                            @if (scheduleCount > 1)
+                                            {
+                                                <span class="badge bg-info ms-1">+@(scheduleCount - 1) buổi khác</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Chưa có lịch</span>
+                                        }
+                                        <br />
+                                        
+                                        <i class="fas fa-calendar-plus text-warning"></i> 
+                                        <strong>Ngày ghi danh:</strong> @enrollment.EnrollmentDate.ToString("dd/MM/yyyy")
+                                    </p>
+                                </div>
+                                <div class="class-actions">
+                                    <a asp-action="MyScores" class="btn btn-sm btn-success" title="Xem điểm">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </a>
+                                    <a asp-action="Schedule" class="btn btn-sm btn-info" title="Lịch học">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </a>
+                                    <a asp-action="Tuition" class="btn btn-sm btn-warning" title="Học phí">
+                                        <i class="fas fa-money-bill"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    @if (Model.Count(e => e.Status == "Enrolled") > 5)
+                    {
+                        <div class="text-center mt-3">
+                            <a asp-action="MyClasses" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> Xem tất cả @enrolledClasses lớp học
+                            </a>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="fas fa-book-open"></i>
+                        <h5>Chưa có lớp học nào</h5>
+                        <p>Bạn chưa đăng ký lớp học nào. Hãy liên hệ với phòng đào tạo để đăng ký.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Today's Schedule -->
+        @if (upcomingToday.Any())
+        {
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-day"></i> Lịch Học Hôm Nay
+                        <span class="badge bg-light text-dark ms-2">@upcomingToday.Count buổi</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="schedule-list">
+                        @foreach (var enrollment in upcomingToday)
+                        {
+                            var classItem = enrollment.Class;
+                            @foreach (var schedule in classItem?.ClassSchedules?.Where(s => s.Weekday == today) ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>())
+                            {
+                                <div class="schedule-item">
+                                    <div class="schedule-time">
+                                        <div class="schedule-day">Hôm Nay</div>
+                                        <div class="schedule-hours">
+                                            @schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")
+                                        </div>
+                                    </div>
+                                    <div class="schedule-info">
+                                        <h6>@classItem.ClassName (@classItem.ClassCode)</h6>
+                                        <p>
+                                            <i class="fas fa-book"></i> @classItem.Course?.CourseName
+                                            @if (schedule.Room != null)
+                                            {
+                                                <span class="ms-3">
+                                                    <i class="fas fa-door-open"></i> @schedule.Room.RoomName
+                                                </span>
+                                            }
+                                        </p>
+                                    </div>
+                                    <div class="schedule-badge">
+                                        @{
+                                            var now = TimeOnly.FromDateTime(DateTime.Now);
+                                            var isNow = now >= schedule.StartTime && now <= schedule.EndTime;
+                                            var isPending = now < schedule.StartTime;
+                                        }
+                                        @if (isNow)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-play-circle"></i> Đang diễn ra
+                                            </span>
+                                        }
+                                        else if (isPending)
+                                        {
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock"></i> Sắp tới
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-check"></i> Đã kết thúc
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Quick Actions & Notifications -->
+    <div class="col-lg-4 mb-4">
+        <!-- Student Profile Card -->
+        @if (student != null)
+        {
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-circle"></i> Thông Tin Cá Nhân
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="student-avatar mb-3">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h5 class="mb-1">@student.FullName</h5>
+                    <p class="text-muted mb-2">
+                        <span class="badge bg-primary">@student.StudentCode</span>
+                    </p>
+                    <hr>
+                    <div class="student-info-list">
+                        <div class="info-item">
+                            <i class="fas fa-envelope text-primary"></i>
+                            <small>@student.Email</small>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-phone text-success"></i>
+                            <small>@student.PhoneNumber</small>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-calendar text-info"></i>
+                            <small>@student.DateOfBirth?.ToString("dd/MM/yyyy")</small>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-id-card text-warning"></i>
+                            <small>Trạng thái: @student.Status?.StatusName</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i> Thao Tác Nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="quick-actions">
+                    <a asp-action="MyClasses" class="quick-action-btn">
+                        <i class="fas fa-book-open"></i> Lớp học của tôi
+                    </a>
+                    <a asp-action="MyScores" class="quick-action-btn">
+                        <i class="fas fa-chart-bar"></i> Xem điểm số
+                    </a>
+                    <a asp-action="Schedule" class="quick-action-btn">
+                        <i class="fas fa-calendar-alt"></i> Thời khóa biểu
+                    </a>
+                    <a asp-action="Tuition" class="quick-action-btn">
+                        <i class="fas fa-money-bill-wave"></i> Thanh toán học phí
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell"></i> Thông Báo
+                    </h5>
+                    <a asp-action="Notifications" class="btn btn-sm btn-outline-primary">
+                        Xem tất cả
+                    </a>
+                </div>
+            </div>
+            <div class="card-body notification-list">
+                <div class="notification-item">
+                    <i class="fas fa-info-circle text-info"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Học kỳ mới bắt đầu vào ngày 15/01/2025</p>
+                        <small class="notification-date">2 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-exclamation-circle text-warning"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Nhắc nhở: Đóng học phí trước ngày 20/01/2025</p>
+                        <small class="notification-date">5 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Đã cập nhật điểm giữa kỳ cho lớp Lập Trình Web</p>
+                        <small class="notification-date">1 ngày trước</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Learning Progress -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i> Tiến Độ Học Tập
+                    </h5>
+                    <div>
+                        <span class="badge bg-success me-2">
+                            Hoàn thành: @completedClasses/@totalClasses
+                        </span>
+                        <span class="badge bg-primary">
+                            @((totalClasses > 0 ? (completedClasses * 100.0 / totalClasses) : 0).ToString("F1"))% hoàn thành
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="progress-container">
+                    @{
+                        var progressPercentage = totalClasses > 0 ? (completedClasses * 100.0 / totalClasses) : 0;
+                    }
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: @progressPercentage%" 
+                             aria-valuenow="@progressPercentage" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            @completedClasses / @totalClasses lớp
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="progress-stat">
+                                <div class="stat-icon-small bg-primary">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <h6>@enrolledClasses</h6>
+                                    <p>Đang Học</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="progress-stat">
+                                <div class="stat-icon-small bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <h6>@completedClasses</h6>
+                                    <p>Hoàn Thành</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="progress-stat">
+                                <div class="stat-icon-small bg-info">
+                                    <i class="fas fa-certificate"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <h6>@totalCredits</h6>
+                                    <p>Tín Chỉ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .class-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .class-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s;
+        }
+        
+        .class-item:hover {
+            background: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .class-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .class-info {
+            flex: 1;
+        }
+        
+        .class-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 8px;
+        }
+        
+        .class-code {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .class-details {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.8;
+        }
+        
+        .class-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .student-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 48px;
+            margin: 0 auto;
+        }
+        
+        .student-info-list {
+            text-align: left;
+        }
+        
+        .info-item {
+            padding: 10px;
+            border-bottom: 1px solid #e3e6f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .schedule-item:hover {
+            background: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .schedule-time {
+            min-width: 120px;
+            margin-right: 20px;
+        }
+        
+        .schedule-day {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 14px;
+        }
+        
+        .schedule-hours {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .schedule-info {
+            flex: 1;
+        }
+        
+        .schedule-info h6 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .schedule-info p {
+            margin: 0;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .schedule-badge {
+            margin-left: auto;
+        }
+        
+        .progress-stat {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-icon-small {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+        }
+        
+        .stat-content-small h6 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .stat-content-small p {
+            margin: 0;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            color: #d1d5db;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h5 {
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #9ca3af;
+        }
+        
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            color: var(--dark-color);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .quick-action-btn:hover {
+            background: var(--primary-color);
+            color: #fff;
+            border-left-color: var(--secondary-color);
+            transform: translateX(5px);
+        }
+        
+        .quick-action-btn i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .notification-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .notification-item:hover {
+            background: #e3e6f0;
+            cursor: pointer;
+        }
+        
+        .notification-item i {
+            font-size: 20px;
+            margin-top: 2px;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-text {
+            margin: 0 0 5px 0;
+            font-size: 13px;
+            color: var(--dark-color);
+            line-height: 1.5;
+        }
+        
+        .notification-date {
+            color: #9ca3af;
+            font-size: 11px;
+        }
+        
+        @@media print {
+            .header-actions,
+            .quick-actions,
+            .class-actions,
+            .notification-list {
+                display: none !important;
+            }
+        }
+        
+        @@media (max-width: 768px) {
+            .class-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .class-icon {
+                margin-bottom: 15px;
+            }
+            
+            .class-actions {
+                flex-direction: row;
+                width: 100%;
+                margin-top: 15px;
+            }
+            
+            .class-actions .btn {
+                flex: 1;
+            }
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            console.log('Student Dashboard loaded');
+            
+            // Add hover effects to class items
+            $('.class-item').hover(
+                function() {
+                    $(this).find('.class-actions').addClass('show');
+                },
+                function() {
+                    $(this).find('.class-actions').removeClass('show');
+                }
+            );
+            
+            // Mark notification as read on click
+            $('.notification-item').on('click', function() {
+                $(this).css('opacity', '0.6');
+                // TODO: Send AJAX request to mark as read
+            });
+            
+            // Animate progress bar on load
+            setTimeout(function() {
+                $('.progress-bar').css('transition', 'width 1.5s ease-in-out');
+            }, 100);
+        });
+    </script>
+}

@@ -1,0 +1,394 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    ViewData["Title"] = "Lớp Học Của Tôi";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-book-open"></i> Lớp Học Của Tôi
+        </h1>
+        <p class="page-subtitle">Quản lý tất cả các lớp học bạn đang theo học</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-success" onclick="exportToExcel()">
+            <i class="fas fa-file-excel"></i> Xuất Danh Sách
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> In Danh Sách
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count()</div>
+                    <div class="stat-label">Tổng Lớp Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count(e => e.Status == "Enrolled")</div>
+                    <div class="stat-label">Đang Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count(e => e.Status == "Completed")</div>
+                    <div class="stat-label">Hoàn Thành</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Sum(e => e.Class?.ClassSchedules?.Count ?? 0)</div>
+                    <div class="stat-label">Buổi Học/Tuần</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchClass" placeholder="Tìm kiếm lớp học...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="Enrolled">Đang học</option>
+                    <option value="Completed">Hoàn thành</option>
+                    <option value="Dropped">Đã nghỉ</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="sortBy">
+                    <option value="name">Tên lớp A-Z</option>
+                    <option value="date">Ngày ghi danh</option>
+                    <option value="course">Khóa học</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Classes List -->
+@if (Model != null && Model.Any())
+{
+    <div class="row" id="classesContainer">
+        @foreach (var enrollment in Model)
+        {
+            var classItem = enrollment.Class;
+            var course = classItem?.Course;
+            var statusBadge = enrollment.Status switch
+            {
+                "Enrolled" => "bg-success",
+                "Completed" => "bg-primary",
+                "Dropped" => "bg-danger",
+                _ => "bg-secondary"
+            };
+            var statusText = enrollment.Status switch
+            {
+                "Enrolled" => "Đang học",
+                "Completed" => "Hoàn thành",
+                "Dropped" => "Đã nghỉ",
+                _ => enrollment.Status
+            };
+            
+            <div class="col-lg-6 mb-4 class-card-item" 
+                 data-status="@enrollment.Status" 
+                 data-class-name="@classItem?.ClassName?.ToLower()"
+                 data-enrollment-date="@enrollment.EnrollmentDate.ToString("yyyyMMdd")">
+                <div class="card h-100 class-card">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chalkboard"></i> @classItem?.ClassName
+                            </h5>
+                            <span class="badge @statusBadge">@statusText</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="class-info-section">
+                            <div class="info-row mb-3">
+                                <div class="info-label">
+                                    <i class="fas fa-barcode text-info"></i> Mã Lớp
+                                </div>
+                                <div class="info-value">
+                                    <span class="badge bg-secondary">@classItem?.ClassCode</span>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row mb-3">
+                                <div class="info-label">
+                                    <i class="fas fa-book text-success"></i> Khóa Học
+                                </div>
+                                <div class="info-value">
+                                    <strong>@course?.CourseName</strong>
+                                    <br>
+                                    <small class="text-muted">Mã: @course?.CourseCode</small>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row mb-3">
+                                <div class="info-label">
+                                    <i class="fas fa-calendar-plus text-warning"></i> Ngày Ghi Danh
+                                </div>
+                                <div class="info-value">
+                                    @enrollment.EnrollmentDate.ToString("dd/MM/yyyy")
+                                </div>
+                            </div>
+                            
+                            @if (classItem?.ClassSchedules != null && classItem.ClassSchedules.Any())
+                            {
+                                <div class="info-row mb-3">
+                                    <div class="info-label">
+                                        <i class="fas fa-clock text-primary"></i> Lịch Học
+                                    </div>
+                                    <div class="info-value">
+                                        @foreach (var schedule in classItem.ClassSchedules.Take(2))
+                                        {
+                                            var weekdayVi = schedule.Weekday switch
+                                            {
+                                                "Monday" => "T2",
+                                                "Tuesday" => "T3",
+                                                "Wednesday" => "T4",
+                                                "Thursday" => "T5",
+                                                "Friday" => "T6",
+                                                "Saturday" => "T7",
+                                                "Sunday" => "CN",
+                                                _ => schedule.Weekday
+                                            };
+                                            
+                                            <div class="schedule-badge">
+                                                <span class="badge bg-info me-1">@weekdayVi</span>
+                                                <small>@schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")</small>
+                                            </div>
+                                        }
+                                        @if (classItem.ClassSchedules.Count > 2)
+                                        {
+                                            <small class="text-muted">+@(classItem.ClassSchedules.Count - 2) buổi khác</small>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            
+                            <div class="info-row">
+                                <div class="info-label">
+                                    <i class="fas fa-money-bill-wave text-success"></i> Học Phí
+                                </div>
+                                <div class="info-value">
+                                    <strong class="text-success">@course?.TuitionFee.ToString("N0") VNĐ</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a asp-action="Schedule" class="btn btn-sm btn-info flex-fill">
+                                <i class="fas fa-calendar-alt"></i> Lịch học
+                            </a>
+                            <a asp-action="MyScores" class="btn btn-sm btn-warning flex-fill">
+                                <i class="fas fa-chart-bar"></i> Điểm số
+                            </a>
+                            <a asp-action="Tuition" class="btn btn-sm btn-success flex-fill">
+                                <i class="fas fa-money-bill"></i> Học phí
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">Chưa có lớp học nào</h5>
+                <p class="text-muted">Bạn chưa đăng ký lớp học nào trong hệ thống.</p>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .class-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #4e73df;
+        }
+        
+        .class-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .class-info-section {
+            font-size: 14px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #e3e6f0;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #5a5c69;
+            min-width: 140px;
+        }
+        
+        .info-value {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .schedule-badge {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+        
+        @@media print {
+            .header-actions,
+            .card-footer,
+            .btn {
+                display: none !important;
+            }
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchClass').on('keyup', function() {
+                const value = $(this).val().toLowerCase();
+                filterClasses();
+            });
+            
+            // Filter by status
+            $('#filterStatus').on('change', function() {
+                filterClasses();
+            });
+            
+            // Sort functionality
+            $('#sortBy').on('change', function() {
+                sortClasses($(this).val());
+            });
+            
+            function filterClasses() {
+                const searchValue = $('#searchClass').val().toLowerCase();
+                const statusValue = $('#filterStatus').val();
+                
+                $('.class-card-item').each(function() {
+                    const className = $(this).data('class-name') || '';
+                    const status = $(this).data('status') || '';
+                    
+                    const matchSearch = className.indexOf(searchValue) > -1;
+                    const matchStatus = !statusValue || status === statusValue;
+                    
+                    $(this).toggle(matchSearch && matchStatus);
+                });
+            }
+            
+            function sortClasses(sortBy) {
+                const $container = $('#classesContainer');
+                const $items = $('.class-card-item');
+                
+                $items.sort(function(a, b) {
+                    let aVal, bVal;
+                    
+                    switch(sortBy) {
+                        case 'name':
+                            aVal = $(a).data('class-name');
+                            bVal = $(b).data('class-name');
+                            return aVal > bVal ? 1 : -1;
+                        case 'date':
+                            aVal = $(a).data('enrollment-date');
+                            bVal = $(b).data('enrollment-date');
+                            return bVal - aVal;
+                        default:
+                            return 0;
+                    }
+                });
+                
+                $container.html($items);
+            }
+        });
+        
+        function exportToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            wsData.push(['DANH SÁCH LỚP HỌC CỦA TÔI']);
+            wsData.push([]);
+            wsData.push(['STT', 'Mã Lớp', 'Tên Lớp', 'Khóa Học', 'Ngày GD', 'Trạng Thái', 'Học Phí']);
+            
+            let stt = 1;
+            $('.class-card-item:visible').each(function() {
+                const $card = $(this).find('.card-body');
+                const classCode = $card.find('.badge.bg-secondary').text();
+                const className = $card.closest('.card').find('h5').text().trim().replace('', '').trim();
+                const courseName = $card.find('.info-value strong').first().text();
+                const enrollDate = $card.find('.info-value').eq(2).text().trim();
+                const status = $(this).find('.card-header .badge').text();
+                const tuition = $card.find('.text-success strong').text();
+                
+                wsData.push([stt++, classCode, className, courseName, enrollDate, status, tuition]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Lớp Học');
+            XLSX.writeFile(wb, 'DanhSachLopHoc.xlsx');
+        }
+    </script>
+}

@@ -35,7 +35,7 @@ namespace StudentManagement.Controllers
         {
             var students = await _context.Students
                 .Include(s => s.User)
-                .Include(s => s.Status) // Include the Status navigation property
+                .Include(s => s.Status)
                 .ToListAsync();
             return View(students);
         }
@@ -44,36 +44,29 @@ namespace StudentManagement.Controllers
         public async Task<IActionResult> Classes()
         {
             var classes = await _context.Classes
-            .Include(c => c.Course)          // Cần cho CourseName, CourseId (đã có)
-            .Include(c => c.Teacher)         // Cần cho Tên Giảng viên (đã có)
+            .Include(c => c.Course)        
+            .Include(c => c.Teacher)    
 
-            // >>> CẦN THÊM CÁC INCLUDE NÀY <<<
-            .Include(c => c.Enrollments)     // Cần để tính:
-                                         // 1. Số lượng Sinh viên đã Ghi danh (@Model.Sum(c => c.Enrollments.Count))
-                                         // 2. Sĩ số đã đăng ký (@enrollmentCount/@maxStudents)
-            .Include(c => c.ClassSchedules)  // Cần để hiển thị Lịch học (@classItem.ClassSchedules.Any())
+            .Include(c => c.Enrollments)    
+            .Include(c => c.ClassSchedules)  
 
             .ToListAsync();
 
             return View(classes);
         }
         [HttpPost]
-        [ValidateAntiForgeryToken] // Luôn nên có để bảo mật
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateClass([Bind("CourseId,TeacherId,ClassCode,ClassName,MaxStudents")] Class newClass)
         {
-            // Loại bỏ các Navigation Properties khỏi kiểm tra ModelState 
-            // vì chúng không được gửi từ form (giúp ModelState.IsValid chính xác hơn)
             ModelState.Remove("Course");
             ModelState.Remove("Teacher");
             ModelState.Remove("Enrollments");
             ModelState.Remove("ClassSchedules");
 
-            // Kiểm tra tính hợp lệ của dữ liệu cơ bản
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Thiết lập giá trị mặc định nếu MaxStudents không được nhập
                     if (newClass.MaxStudents == null || newClass.MaxStudents <= 0)
                     {
                         newClass.MaxStudents = 30;
@@ -84,23 +77,19 @@ namespace StudentManagement.Controllers
 
                     TempData["SuccessMessage"] = $"Đã tạo lớp **{newClass.ClassName}** thành công.";
 
-                    // Chuyển hướng về trang danh sách lớp học
                     return RedirectToAction(nameof(Classes));
                 }
                 catch (DbUpdateException)
                 {
-                    // Xử lý lỗi trùng mã lớp (ClassCode là UNIQUE) hoặc lỗi CSDL khác
                     TempData["ErrorMessage"] = "Lỗi: Không thể lưu lớp học. Mã Lớp (ClassCode) có thể đã bị trùng.";
                     return RedirectToAction(nameof(Classes));
                 }
             }
 
-            // Nếu Model không hợp lệ (ví dụ: thiếu ClassCode, ClassName), chuyển hướng về trang và hiển thị lỗi
             TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc (Mã lớp, Tên lớp, Khóa học).";
             return RedirectToAction(nameof(Classes));
         }
 
-        // GET: /Admin/GeneralSchedule
         public async Task<IActionResult> GeneralSchedule()
         {
             // Lấy tất cả lịch học của tất cả các lớp
