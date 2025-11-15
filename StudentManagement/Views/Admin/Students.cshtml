@@ -118,3 +118,102 @@
         </div>
     </div>
 </div>
+
+@* Modal
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addStudentModalLabel">
+                    <i class="fas fa-user-plus"></i> Thêm Sinh Viên Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                
+                <form id="addStudentForm" asp-controller="Admin" asp-action="CreateStudent" method="post">
+                    @Html.AntiForgeryToken()
+
+                    
+                    <h6 class="mb-3 text-primary"><i class="fas fa-lock"></i> I. Thông tin Tài khoản</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Mã SV <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="StudentCode" required placeholder="SVxxxx">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Username" required placeholder="user.name">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" name="Password" required placeholder="Nhập mật khẩu">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Xác nhận MK <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" name="ConfirmPassword" required placeholder="Nhập lại mật khẩu">
+                        </div>
+                    </div>
+
+                    
+                    <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> II. Thông tin Cá nhân</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Họ và Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="FullName" required placeholder="Nguyễn Văn A">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Ngày Sinh</label>
+                            <input type="date" class="form-control" name="DateOfBirth">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Giới Tính</label>
+                            <select class="form-select" name="Gender">
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" name="Email" required placeholder="email@example.com">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Số Điện Thoại</label>
+                            <input type="tel" class="form-control" name="PhoneNumber" placeholder="0xxxxxxxxx">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
+                            <select class="form-select" name="StatusId" required>
+                                {{-- Dữ liệu Statuses được tải vào ViewBag.StudentStatuses trong AdminController.Students() --}}
+                                @if (ViewBag.StudentStatuses is List<StudentManagement.Models.StudentStatus> statuses)
+                                {
+                                    @foreach (var status in statuses)
+                                    {
+                                        <option value="@status.StatusId">@status.StatusName</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Địa Chỉ</label>
+                        <input type="text" class="form-control" name="Address" placeholder="123 Đường ABC, Quận XYZ">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="submit" form="addStudentForm" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Sinh Viên
+                </button>
+            </div>
+        </div>
+    </div>
+</div> *@

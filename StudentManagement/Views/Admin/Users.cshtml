@@ -449,6 +449,130 @@
     
     <script>
         $(document).ready(function() {
+            
+
+        // Lấy tất cả các hàng dữ liệu ban đầu
+            var $rows = $('tbody tr');
+
+            // ===============================================
+            // 1. HÀM LỌC VÀ SẮP XẾP TỔNG HỢP
+            // ===============================================
+            function applyFiltersAndSorting() {
+                var searchTerm = $('#searchUser').val().toLowerCase();
+                var filterRole = $('#filterRole').val().toLowerCase();
+                var filterStatus = $('#filterStatus').val().toLowerCase();
+                var sortBy = $('#sortBy').val();
+
+                // 1.1 Lọc (Filter)
+                $rows.each(function() {
+                    var $row = $(this);
+                    var isMatch = true;
+
+                    // Lấy giá trị từ các cột cụ thể trong hàng
+                    var fullName = $row.find('td:nth-child(3) strong').text().toLowerCase();
+                    var username = $row.find('td:nth-child(4) .username-badge').text().toLowerCase();
+                    var email = $row.find('td:nth-child(5) small').text().toLowerCase();
+                    var role = $row.find('td:nth-child(7) .badge').text().toLowerCase().trim();
+                    var statusTextInRow = $row.find('td:nth-child(8) .badge').text().toLowerCase().trim(); // Lấy giá trị: "hoạt động" hoặc "không hoạt động"
+
+                    // --- 1. Lọc theo Tìm kiếm chung (Tên, Username, Email) ---
+                    var searchContent = fullName + username + email;
+                    if (searchTerm && searchContent.indexOf(searchTerm) === -1) {
+                        isMatch = false;
+                    }
+
+                    // --- 2. Lọc theo Vai trò (Role) ---
+                    if (isMatch && filterRole && role.indexOf(filterRole) === -1) {
+                        isMatch = false;
+                    }
+
+                    // --- 3. Lọc theo Trạng thái (Status) ---
+
+                    if (isMatch && filterStatus) {
+                        // Ánh xạ giá trị hiển thị (tiếng Việt) sang giá trị logic (tiếng Anh)
+                        var statusLogicValue = '';
+                        if (statusTextInRow === 'hoạt động') {
+                            statusLogicValue = 'active';
+                        } else if (statusTextInRow === 'không hoạt động') {
+                            statusLogicValue = 'inactive';
+                        }
+
+                        // So sánh giá trị logic đã ánh xạ với giá trị filter (filterStatus)
+                        if (statusLogicValue.indexOf(filterStatus) === -1) {
+                            isMatch = false;
+                        }
+                    }
+
+                    $row.toggle(isMatch);
+                
+
+                    
+                });
+
+                // 1.2 Sắp xếp (Sorting)
+                var $visibleRows = $('tbody tr:visible').get();
+
+                $visibleRows.sort(function(a, b) {
+                    var valA, valB;
+                    var $elemA = $(a);
+                    var $elemB = $(b);
+
+                    switch (sortBy) {
+                        case 'name': // Tên A-Z
+                            valA = $elemA.find('td:nth-child(3) strong').text().toUpperCase();
+                            valB = $elemB.find('td:nth-child(3) strong').text().toUpperCase();
+                            return (valA < valB) ? -1 : (valA > valB) ? 1 : 0;
+
+                        case 'newest': // Ngày tạo Mới nhất (Giảm dần)
+                        case 'oldest': // Ngày tạo Cũ nhất (Tăng dần)
+                            // Lấy text ngày tạo (cột 10) và chuyển đổi thành đối tượng Date
+                            var dateTextA = $elemA.find('td:nth-child(10) small').text().trim().replace('i.fa-calendar', '').trim();
+                            var dateTextB = $elemB.find('td:nth-child(10) small').text().trim().replace('i.fa-calendar', '').trim();
+
+                            // Chuyển đổi định dạng DD/MM/YYYY sang Date object (cần kiểm tra thư viện nếu dùng moment.js)
+                            // Sử dụng hàm parseDate để đảm bảo hoạt động trên các trình duyệt khác nhau
+                            valA = parseDate(dateTextA);
+                            valB = parseDate(dateTextB);
+
+                            var comparison = valA.getTime() - valB.getTime();
+                            return sortBy === 'newest' ? -comparison : comparison; // newest là giảm dần
+
+                        default:
+                            return 0;
+                    }
+                });
+
+                // Chèn các hàng đã sắp xếp trở lại bảng
+                $.each($visibleRows, function(index, row) {
+                    $('tbody').append(row);
+                });
+            }
+
+            // Hàm chuyển đổi DD/MM/YYYY thành Date Object (Cần thiết cho sorting)
+            function parseDate(dateString) {
+                if (!dateString) return new Date(0);
+                var parts = dateString.split('/');
+                // Trả về YYYY, MM-1, DD
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+
+
+            // ===============================================
+            // 2. GẮN SỰ KIỆN VÀ KHỞI TẠO
+            // ===============================================
+
+            $('#searchUser').on('keyup', applyFiltersAndSorting);
+            $('#filterRole').on('change', applyFiltersAndSorting);
+            $('#filterStatus').on('change', applyFiltersAndSorting);
+            $('#sortBy').on('change', applyFiltersAndSorting);
+
+            
+
+            // Chạy hàm khi tải trang để áp dụng sắp xếp và lọc mặc định (newest)
+            applyFiltersAndSorting();
+
+
+
             // Search functionality
             $('#searchUser').on('keyup', function() {
                 var value = $(this).val().toLowerCase();
@@ -456,7 +580,7 @@
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
                 });
             });
-            
+
             // Select all checkboxes
             $('#selectAll').click(function() {
                 $('.row-checkbox').prop('checked', this.checked);

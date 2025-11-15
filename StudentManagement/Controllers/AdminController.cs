@@ -2,8 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
 using StudentManagement.Attributes;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using StudentManagement.Models.ViewModels;
 namespace StudentManagement.Controllers
+
 {
     [AuthorizeRole("Admin")]
     public class AdminController : Controller
@@ -33,12 +36,22 @@ namespace StudentManagement.Controllers
         // Students Management
         public async Task<IActionResult> Students()
         {
+            // Lấy danh sách Student Status cho Modal và Filter
+            ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+
+            // Lấy danh sách Sinh viên, đảm bảo Include đầy đủ các thông tin quan trọng
             var students = await _context.Students
-                .Include(s => s.User)
-                .Include(s => s.Status) // Include the Status navigation property
-                .ToListAsync();
+
+            .Include(s => s.User)
+
+            .Include(s => s.Status)
+
+            .ToListAsync();
+
             return View(students);
         }
+
+
 
         // Classes Management
         public async Task<IActionResult> Classes()
@@ -99,6 +112,72 @@ namespace StudentManagement.Controllers
             TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc (Mã lớp, Tên lớp, Khóa học).";
             return RedirectToAction(nameof(Classes));
         }
+
+        // GET: /Admin/ExportClassesToExcel
+        //public async Task<IActionResult> ExportClassesToExcel()
+        //{
+        //    // Lấy dữ liệu đầy đủ từ CSDL
+        //    var classes = await _context.Classes
+        //        .Include(c => c.Course)
+        //        .Include(c => c.Teacher)
+        //        .Include(c => c.Enrollments)
+        //        .Include(c => c.ClassSchedules)
+        //        .ToListAsync();
+
+        //    using (var package = new ExcelPackage())
+        //    {
+        //        var worksheet = package.Workbook.Worksheets.Add("DanhSachLopHoc");
+
+        //        // --- Cột Header ---
+        //        worksheet.Cells[1, 1].Value = "Mã Lớp";
+        //        worksheet.Cells[1, 2].Value = "Tên Lớp";
+        //        worksheet.Cells[1, 3].Value = "Khóa Học";
+        //        worksheet.Cells[1, 4].Value = "Giảng Viên";
+        //        worksheet.Cells[1, 5].Value = "Sĩ Số Tối Đa";
+        //        worksheet.Cells[1, 6].Value = "Số HV Đăng Ký";
+        //        worksheet.Cells[1, 7].Value = "Tình Trạng";
+
+        //        // Định dạng Header (Tùy chọn)
+        //        using (var range = worksheet.Cells[1, 1, 1, 7])
+        //        {
+        //            range.Style.Font.Bold = true;
+        //            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        //            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+        //        }
+
+        //        // --- Đổ dữ liệu ---
+        //        int row = 2;
+        //        foreach (var classItem in classes)
+        //        {
+        //            var enrollmentCount = classItem.Enrollments?.Count ?? 0;
+        //            var maxStudents = classItem.MaxStudents ?? 0;
+        //            var statusText = (maxStudents > 0 && enrollmentCount >= maxStudents) ? "Gần Đầy" : "Còn Chỗ";
+
+        //            worksheet.Cells[row, 1].Value = classItem.ClassCode;
+        //            worksheet.Cells[row, 2].Value = classItem.ClassName;
+        //            worksheet.Cells[row, 3].Value = classItem.Course?.CourseName;
+        //            worksheet.Cells[row, 4].Value = classItem.Teacher != null
+        //                ? $"{classItem.Teacher.FirstName} {classItem.Teacher.LastName}"
+        //                : "Chưa phân công";
+        //            worksheet.Cells[row, 5].Value = maxStudents;
+        //            worksheet.Cells[row, 6].Value = enrollmentCount;
+        //            worksheet.Cells[row, 7].Value = statusText;
+
+        //            row++;
+        //        }
+
+        //        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        //        // --- Trả về File Excel ---
+        //        var stream = new MemoryStream();
+        //        package.SaveAs(stream);
+        //        stream.Position = 0;
+
+        //        string excelName = $"Classes_Export_{DateTime.Now.ToString("yyyyMMddHHmmss")}.xlsx";
+
+        //        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
+        //    }
+        //}
 
         // GET: /Admin/GeneralSchedule
         public async Task<IActionResult> GeneralSchedule()
