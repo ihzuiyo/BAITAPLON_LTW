@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj": {}
+    "D:\\Nam3_HK1\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj": {}
   },
   "projects": {
-    "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj": {
+    "D:\\Nam3_HK1\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj",
+        "projectUniqueName": "D:\\Nam3_HK1\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj",
         "projectName": "StudentManagement",
-        "projectPath": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj",
-        "packagesPath": "C:\\Users\\duckcyzz\\.nuget\\packages\\",
-        "outputPath": "D:\\fifth_semester\\Web_Programming_2024_Student\\BTL_2025\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\obj\\",
+        "projectPath": "D:\\Nam3_HK1\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\StudentManagement.csproj",
+        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
+        "outputPath": "D:\\Nam3_HK1\\BTL_LTW\\BAITAPLON_LTW\\StudentManagement\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\duckcyzz\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -53,6 +53,10 @@
             "BCrypt.Net-Next": {
               "target": "Package",
               "version": "[4.0.3, )"
+            },
+            "EPPlus": {
+              "target": "Package",
+              "version": "[6.2.19, )"
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",

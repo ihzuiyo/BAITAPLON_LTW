@@ -294,20 +294,22 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="createNotificationForm">
+                <form id="createNotificationForm" method="post" action="/Notification/Create">
+                    @* Thêm Anti-Forgery Token để bảo mật *@
+                    @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-heading"></i> Tiêu Đề <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" placeholder="Nhập tiêu đề thông báo" required>
+                        <input type="text" class="form-control" name="title" placeholder="Nhập tiêu đề thông báo" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-align-left"></i> Nội Dung <span class="text-danger">*</span></label>
-                        <textarea class="form-control" rows="5" placeholder="Nhập nội dung thông báo..." required></textarea>
+                        <textarea class="form-control" rows="5" name="content" placeholder="Nhập nội dung thông báo..." required></textarea>
                         <small class="text-muted">Hỗ trợ định dạng HTML cơ bản</small>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-users"></i> Gửi Đến <span class="text-danger">*</span></label>
-                            <select class="form-select" required>
+                            <select class="form-select" name="recipientTarget" id="recipientTargetSelect" required>
                                 <option value="">-- Chọn đối tượng --</option>
                                 <option value="all">Tất cả</option>
                                 <option value="students">Tất cả sinh viên</option>
@@ -318,18 +320,33 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-clock"></i> Thời Gian Gửi</label>
-                            <select class="form-select">
+                            <select class="form-select" name="sendTime" id="sendTimeSelect">
                                 <option value="now">Gửi ngay</option>
                                 <option value="schedule">Lên lịch gửi</option>
                             </select>
                         </div>
                     </div>
+
+                    <div class="mb-3 d-none" id="classSelectDiv">
+                        <label class="form-label"><i class="fas fa-chalkboard-teacher"></i> Chọn Lớp Học <span class="text-danger">*</span></label>
+                        <select class="form-select" id="classSelect">
+                            <option value="">-- Đang tải Lớp Học --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="individualSelectDiv">
+                        <label class="form-label"><i class="fas fa-user-plus"></i> Chọn Người Dùng Cụ Thể (UserID/Email) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="individualSelect" placeholder="Nhập UserId (ví dụ: 6) hoặc Email (ví dụ: user@example.com)">
+                        <small class="text-danger">Tính năng này giả định bạn nhập UserId hoặc Email của người dùng.</small>
+                    </div>
+
                     <div class="mb-3 d-none" id="scheduleDateTime">
                         <label class="form-label"><i class="fas fa-calendar-alt"></i> Chọn Ngày Giờ</label>
-                        <input type="datetime-local" class="form-control">
+                        <input type="datetime-local" class="form-control" name="scheduleDateTime">
                     </div>
+
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="sendEmail">
+                        <input class="form-check-input" type="checkbox" id="sendEmail" name="sendEmail" value="true">
                         <label class="form-check-label" for="sendEmail">
                             <i class="fas fa-envelope"></i> Gửi thêm qua Email
                         </label>
@@ -346,6 +363,19 @@
                 <button type="button" class="btn btn-primary">
                     <i class="fas fa-paper-plane"></i> Gửi Thông Báo
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-history"></i> Lịch Sử Hoạt Động Thông Báo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="historyModalBody">
+                <p>Đang tải lịch sử...</p>
             </div>
         </div>
     </div>
@@ -560,23 +590,221 @@
             font-size: 0.85em;
             padding: 6px 12px;
         }
+
+        .template-item.active { /* Thêm CSS cho template được chọn */
+            border-color: #007bff;
+            background-color: #e6f2ff;
+        }
     </style>
-    
+
     <script>
+        // Địa chỉ URL Action để lấy danh sách lớp học
+        const getClassListUrl = '@Url.Action("GetClassList", "Notification")';
+        const historyUrl = '@Url.Action("History", "Notification")';
+        const exportUrl = '@Url.Action("ExportExcel", "Notification")';
+
+        // --- Hàm TẢI DỮ LIỆU LỚP HỌC (AJAX) ---
+        function loadClasses(selectElement) {
+            selectElement.html('<option value="">Đang tải...</option>'); // Hiển thị trạng thái tải
+
+            $.ajax({
+                url: getClassListUrl,
+                type: 'GET',
+                dataType: 'json',
+                success: function(classes) {
+                    let options = '<option value="">-- Chọn Lớp Học --</option>';
+
+                    if (classes.length === 0) {
+                         options = '<option value="">Không có lớp học nào</option>';
+                    } else {
+                        // Lặp qua dữ liệu lớp học nhận được từ JSON
+                        classes.forEach(cls => {
+                            // Giả định cls có ClassCode, ClassName và CourseName từ Controller
+                            options += `<option value="${cls.classCode}">${cls.className} (${cls.classCode}) - ${cls.courseName}</option>`;
+                        });
+                    }
+                    selectElement.html(options);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Lỗi tải danh sách lớp học:", status, error);
+                    selectElement.html('<option value="">Lỗi: Không tải được danh sách lớp</option>');
+                }
+            });
+        }
+
+        // --- Hàm HỖ TRỢ TEMPLATE ---
+        function getTemplateContent(key) {
+            switch(key) {
+                // ... (Logic template giữ nguyên) ...
+                case 'welcome':
+                    return { title: "Chào mừng sinh viên mới!", content: "Chúc mừng bạn đã gia nhập cộng đồng học tập của chúng tôi! Mọi thông tin cần thiết về khóa học có thể tìm thấy trên hệ thống LMS." };
+                case 'exam':
+                    return { title: "Thông báo lịch thi học kỳ 1", content: "Lịch thi chi tiết đã được cập nhật. Vui lòng kiểm tra trên cổng thông tin sinh viên. Mọi thắc mắc liên hệ phòng đào tạo." };
+                case 'fee':
+                    return { title: "Nhắc nhở học phí", content: "Học phí kỳ này sẽ đến hạn vào ngày [Ngày Cụ Thể]. Vui lòng thanh toán đúng hạn để tránh phát sinh phí phạt." };
+                case 'event':
+                    return { title: "Sự kiện: Hội thảo Hướng nghiệp", content: "Hội thảo hướng nghiệp với chủ đề [Tên Chủ Đề] sẽ diễn ra vào [Ngày/Giờ]. Đăng ký tham gia tại quầy dịch vụ sinh viên." };
+                case 'holiday':
+                    return { title: "Thông báo Lịch nghỉ lễ Quốc Khánh", content: "Trung tâm sẽ nghỉ lễ từ [Ngày Bắt Đầu] đến [Ngày Kết Thúc]. Chúc các bạn một kỳ nghỉ vui vẻ!" };
+                default:
+                    return { title: "", content: "" };
+            }
+        }
+
+        // --- Hàm Xử lý Ẩn/Hiện và Thuộc tính Name (Tâm điểm của yêu cầu) ---
+        function handleRecipientTargetChange(selectedValue) {
+
+            // 1. Reset trạng thái ban đầu: Ẩn tất cả các khối điều khiển phụ
+            $('#classSelectDiv, #individualSelectDiv').addClass('d-none');
+
+            // 2. Reset thuộc tính name và required
+            // Mặc định, dropdown chính (#recipientTargetSelect) có name="recipientTarget"
+            $('#recipientTargetSelect').attr('name', 'recipientTarget');
+
+            // Xóa name của các field phụ để chúng không được gửi đi
+            $('#classSelect').removeAttr('name').prop('required', false);
+            $('#individualSelect').removeAttr('name').prop('required', false);
+
+
+            if (selectedValue === 'class') {
+                // Hiển thị khối chọn lớp
+                $('#classSelectDiv').removeClass('d-none');
+
+                // Cấu hình field lớp học
+                $('#classSelect').attr('name', 'recipientTarget').prop('required', true);
+                $('#recipientTargetSelect').removeAttr('name'); // Tắt name của dropdown chính
+
+                // Tải dữ liệu lớp học nếu chưa có
+                if ($('#classSelect option').length <= 1 || $('#classSelect option:last').text().includes('Lỗi')) {
+                    loadClasses($('#classSelect'));
+                }
+
+            } else if (selectedValue === 'individual') {
+                // Hiển thị khối chọn cá nhân
+                $('#individualSelectDiv').removeClass('d-none');
+
+                // Cấu hình field cá nhân
+                $('#individualSelect').attr('name', 'recipientTarget').prop('required', true);
+                $('#recipientTargetSelect').removeAttr('name'); // Tắt name của dropdown chính
+            }
+            // Nếu chọn 'all', 'students', 'teachers', thì chỉ cần dropdown chính được giữ lại name.
+        }
+
         $(document).ready(function() {
-            // Search functionality
+
+            const form = $('#createNotificationForm');
+
+            // --- 1. Logic tìm kiếm (Keyup) ---
             $('#searchNotification').on('keyup', function() {
                 var value = $(this).val().toLowerCase();
                 $('.notification-card').filter(function() {
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
                 });
             });
-            
-            // Template selection
+
+            // --- 2. Xử lý chức năng Template Selection ---
             $('.template-item').click(function() {
+                // ... (Logic template selection giữ nguyên) ...
                 $('.template-item').removeClass('active');
                 $(this).addClass('active');
-                // Load template content here
+
+                var templateKey = $(this).data('template');
+                var templateData = getTemplateContent(templateKey);
+
+                // Đổ dữ liệu vào form modal
+                $('#createNotificationModal input[name="title"]').val(templateData.title);
+                $('#createNotificationModal textarea[name="content"]').val(templateData.content);
+
+                // Hiển thị modal nếu chưa mở
+                if (!$('#createNotificationModal').hasClass('show')) {
+                    $('#createNotificationModal').modal('show');
+                }
+            });
+
+            // --- 3. Xử lý logic ẨN/HIỆN GỬI ĐẾN VÀ LÊN LỊCH ---
+
+            // A. Xử lý Chọn Đối Tượng Gửi (Theo lớp / Cá nhân)
+            $('#recipientTargetSelect').change(function() {
+                handleRecipientTargetChange($(this).val());
+            });
+
+            // B. Xử lý Lên lịch Gửi (Schedule)
+            $('select[name="sendTime"]').change(function() {
+                if ($(this).val() === 'schedule') {
+                    $('#scheduleDateTime').removeClass('d-none').find('input').prop('required', true);
+                } else {
+                    $('#scheduleDateTime').addClass('d-none').find('input').prop('required', false);
+                }
+            });
+
+            // --- 4. Xử lý chức năng Tạo Mới (Gửi Form bằng AJAX) ---
+            $('.modal-footer .btn-primary:contains("Gửi Thông Báo")').click(function (e) {
+                e.preventDefault();
+
+                // Kiểm tra form validation
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+
+                var formData = form.serializeArray();
+                var sendEmailChecked = $('#sendEmail').is(':checked');
+
+                // Đảm bảo gửi giá trị 'false' nếu checkbox không được chọn
+                if (!sendEmailChecked) {
+                    // Loại bỏ giá trị cũ nếu có
+                    formData = formData.filter(item => item.name !== 'sendEmail');
+                    // Thêm giá trị mới
+                    formData.push({ name: 'sendEmail', value: 'false' });
+                }
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        alert("Thông báo đã được gửi thành công!");
+                        $('#createNotificationModal').modal('hide');
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMessage = "Đã xảy ra lỗi khi gửi thông báo.";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage += "\n" + xhr.responseJSON.message;
+                        }
+                        alert(errorMessage);
+                        console.error("AJAX Error:", status, error, xhr.responseText);
+                    }
+                });
+            });
+
+            // --- 5. Xử lý chức năng Xuất Excel ---
+            $('.header-actions .btn-success:contains("Xuất Excel")').click(function() {
+                window.location.href = exportUrl;
+            });
+
+            // --- 6. Xử lý chức năng Lịch Sử (Hiển thị Modal Lịch Sử) ---
+            $('.header-actions .btn-info:contains("Lịch Sử")').click(function() {
+                $.ajax({
+                    url: historyUrl,
+                    type: 'GET',
+                    beforeSend: function() {
+                        $('#historyModalBody').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</p>');
+                        $('#historyModal').modal('show');
+                    },
+                    success: function(htmlContent) {
+                        $('#historyModalBody').html(htmlContent);
+                    },
+                    error: function() {
+                        $('#historyModalBody').html('<p class="text-danger text-center"><i class="fas fa-exclamation-triangle"></i> Lỗi: Không thể tải lịch sử hoạt động.</p>');
+                    }
+                });
+            });
+
+            // Khôi phục thuộc tính name và required ban đầu khi modal bị đóng (phòng trường hợp form bị gửi lại)
+            $('#createNotificationModal').on('hidden.bs.modal', function () {
+                // Đặt lại trạng thái ban đầu (ví dụ: gửi đến 'all')
+                handleRecipientTargetChange($('#recipientTargetSelect').val());
             });
         });
     </script>
