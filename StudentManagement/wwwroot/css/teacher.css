@@ -1,4 +1,4 @@
-﻿/* Teacher Dashboard Styles */
+﻿/* Teacher Dashboard Styles - Complete Fix */
 :root {
     --primary-color: #16A085;
     --secondary-color: #1ABC9C;
@@ -9,6 +9,7 @@
     --dark-color: #2C3E50;
     --light-color: #ECF0F1;
     --sidebar-width: 260px;
+    --sidebar-collapsed-width: 80px;
 }
 
 body {
@@ -22,25 +23,140 @@ body {
     align-items: stretch;
 }
 
-/* Sidebar Styles */
+/* ==========================================
+   SIDEBAR STYLES
+   ========================================== */
 .sidebar {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
-    background: linear-gradient(135deg, var(--primary-color) 0%, #138D75 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
     color: #fff;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     position: fixed;
     height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     z-index: 1000;
 }
 
+/* Collapsed Sidebar */
+.sidebar.collapsed {
+    min-width: var(--sidebar-collapsed-width);
+    max-width: var(--sidebar-collapsed-width);
+}
+
+/* Hide all text elements when collapsed */
+.sidebar.collapsed .sidebar-header h3,
+.sidebar.collapsed .sidebar-header .subtitle {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    display: none;
+}
+
+/* Hide menu item text when collapsed */
+.sidebar.collapsed ul li a {
+    text-align: center;
+    padding: 15px 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed ul li a i {
+    margin-right: 0;
+    font-size: 22px;
+}
+
+/* Hide .menu-text span when collapsed */
+.sidebar.collapsed .menu-text {
+    display: none !important;
+    opacity: 0;
+    width: 0;
+    visibility: hidden;
+}
+
+/* Hide submenu completely when collapsed */
+.sidebar.collapsed .submenu {
+    display: none !important;
+    position: fixed !important;
+    left: 80px;
+    background: rgba(0,0,0,0.95);
+    border-radius: 5px;
+    padding: 10px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    min-width: 200px;
+    z-index: 1002;
+}
+
+/* Show submenu on parent item hover */
+.sidebar.collapsed li:hover .submenu {
+    display: block !important;
+}
+
+/* Style submenu links when sidebar is collapsed */
+.sidebar.collapsed .submenu li a {
+    padding: 10px 20px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+}
+
+/* Ensure menu text is visible in submenu */
+.sidebar.collapsed .submenu li a .menu-text {
+    display: inline !important;
+    opacity: 1 !important;
+    width: auto !important;
+    visibility: visible !important;
+}
+
+/* Style submenu icons when sidebar is collapsed */
+.sidebar.collapsed .submenu li a i {
+    margin-right: 10px !important;
+    font-size: 14px !important;
+}
+
+/* Hide dropdown arrow when collapsed */
+.sidebar.collapsed .dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Hide logout button text when collapsed */
+.sidebar.collapsed .logout-btn {
+    text-align: center;
+    padding: 15px 0;
+}
+
+.sidebar.collapsed .logout-btn .menu-text {
+    display: none !important;
+}
+
+.sidebar.collapsed .logout-btn i {
+    margin-right: 0;
+    font-size: 20px;
+}
+
+.sidebar.collapsed .logo-container {
+    flex-direction: column;
+}
+
+.sidebar.collapsed .logo-icon {
+    margin-right: 0;
+}
+
+/* ==========================================
+   SIDEBAR HEADER
+   ========================================== */
 .sidebar-header {
     padding: 30px 20px;
     background: rgba(0,0,0,0.2);
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-header {
+    padding: 20px 10px;
 }
 
 .logo-container {
@@ -48,12 +164,14 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 10px;
+    transition: all 0.3s ease;
 }
 
 .logo-icon {
     font-size: 36px;
     margin-right: 10px;
-    color: #F4D03F;
+    color: var(--secondary-color);
+    transition: all 0.3s ease;
 }
 
 .sidebar-header h3 {
@@ -61,14 +179,19 @@ body {
     font-weight: 700;
     margin: 0;
     letter-spacing: 2px;
+    transition: all 0.3s ease;
 }
 
 .sidebar-header .subtitle {
     font-size: 13px;
     opacity: 0.8;
     margin: 5px 0 0 0;
+    transition: all 0.3s ease;
 }
 
+/* ==========================================
+   MENU ITEMS
+   ========================================== */
 .sidebar ul.components {
     padding: 20px 0;
 }
@@ -80,31 +203,91 @@ body {
 .sidebar ul li a {
     padding: 12px 25px;
     font-size: 15px;
-    display: block;
+    display: flex;
+    align-items: center;
     color: rgba(255,255,255,0.8);
     text-decoration: none;
     transition: all 0.3s;
     border-left: 3px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .sidebar ul li a i {
     margin-right: 12px;
     width: 20px;
     text-align: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.sidebar ul li a .menu-text {
+    transition: opacity 0.3s ease;
 }
 
 .sidebar ul li a:hover,
 .sidebar ul li.active > a {
     color: #fff;
     background: rgba(255,255,255,0.1);
-    border-left-color: #F4D03F;
+    border-left-color: var(--secondary-color);
+}
+
+/* ==========================================
+   SUBMENU STYLES
+   ========================================== */
+ul.submenu {
+    background: rgba(0,0,0,0.15);
+    padding-left: 0;
+    margin: 0;
+    transition: all 0.3s ease;
+}
+
+ul.submenu li {
+    margin: 0;
+}
+
+ul.submenu li a {
+    padding: 10px 20px 10px 50px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    border-left: none;
+}
+
+ul.submenu li a i {
+    margin-right: 10px;
+    width: 18px;
+    font-size: 14px;
+}
+
+ul.submenu li a:hover,
+ul.submenu li.active > a {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    padding-left: 55px;
+}
+
+/* Dropdown toggle arrow */
+.dropdown-toggle {
+    position: relative;
 }
 
 .dropdown-toggle::after {
-    float: right;
-    margin-top: 7px;
+    content: '\f107';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 20px;
+    transition: transform 0.3s ease;
+    font-size: 14px;
 }
 
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+
+/* ==========================================
+   SIDEBAR FOOTER
+   ========================================== */
 .sidebar-footer {
     position: absolute;
     bottom: 0;
@@ -112,10 +295,17 @@ body {
     padding: 20px;
     background: rgba(0,0,0,0.2);
     border-top: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-footer {
+    padding: 20px 10px;
 }
 
 .logout-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 12px;
     background: rgba(231,76,60,0.8);
     color: #fff;
@@ -123,19 +313,35 @@ body {
     border-radius: 5px;
     text-decoration: none;
     transition: all 0.3s;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .logout-btn:hover {
     background: rgba(231,76,60,1);
     color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-/* Main Content */
+.logout-btn i {
+    margin-right: 8px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* ==========================================
+   MAIN CONTENT
+   ========================================== */
 #content {
     width: 100%;
     min-height: 100vh;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     margin-left: var(--sidebar-width);
+}
+
+#content.expanded {
+    margin-left: var(--sidebar-collapsed-width);
 }
 
 .top-navbar {
@@ -149,6 +355,12 @@ body {
     background: var(--primary-color);
     border: none;
     color: #fff;
+    transition: all 0.3s ease;
+}
+
+.top-navbar #sidebarCollapse:hover {
+    background: var(--dark-color);
+    transform: scale(1.05);
 }
 
 .user-info {
@@ -169,8 +381,52 @@ body {
     min-height: calc(100vh - 120px);
 }
 
-/* Dashboard Header */
+/* ==========================================
+   TOOLTIP FOR COLLAPSED SIDEBAR
+   ========================================== */
+.sidebar.collapsed ul li a,
+.sidebar.collapsed .logout-btn {
+    position: relative;
+}
+
+.sidebar.collapsed ul li a:hover::after,
+.sidebar.collapsed .logout-btn:hover::after {
+    content: attr(data-title);
+    position: absolute;
+    left: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+    font-size: 14px;
+    z-index: 1001;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.sidebar.collapsed ul li a:hover::before,
+.sidebar.collapsed .logout-btn:hover::before {
+    content: '';
+    position: absolute;
+    left: 75px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(0,0,0,0.9);
+    z-index: 1001;
+    pointer-events: none;
+}
+
+/* ==========================================
+   DASHBOARD COMPONENTS
+   ========================================== */
 .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 30px;
 }
 
@@ -184,6 +440,11 @@ body {
 .page-subtitle {
     color: #6c757d;
     margin: 5px 0 0 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
 }
 
 /* Statistics Cards */
@@ -245,101 +506,9 @@ body {
     color: #fff;
 }
 
-/* Class List */
-.class-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.class-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #e3e6f0;
-    border-radius: 8px;
-    transition: all 0.3s;
-}
-
-.class-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    border-color: var(--primary-color);
-}
-
-.class-info {
-    flex: 1;
-}
-
-.class-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--dark-color);
-    margin-bottom: 10px;
-}
-
-.class-details {
-    font-size: 14px;
-    color: #6c757d;
-    margin: 0;
-    line-height: 1.8;
-}
-
-.class-details i {
-    color: var(--primary-color);
-    margin-right: 5px;
-}
-
-.class-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-/* Schedule */
-.schedule-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.schedule-item {
-    display: flex;
-    padding: 15px;
-    background: #f8f9fa;
-    border-left: 4px solid var(--primary-color);
-    border-radius: 5px;
-}
-
-.schedule-time {
-    min-width: 100px;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.schedule-info h6 {
-    margin: 0 0 5px 0;
-    font-weight: 600;
-}
-
-/* Todo List */
-.todo-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.todo-list li {
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    align-items: center;
-}
-
-.todo-list li i {
-    margin-right: 10px;
-    font-size: 8px;
+.stat-card-teal {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #fff;
 }
 
 /* Cards */
@@ -368,23 +537,89 @@ body {
     color: #6c757d;
 }
 
-/* Responsive */
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.5);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
 @media (max-width: 768px) {
     .sidebar {
         margin-left: calc(-1 * var(--sidebar-width));
+    }
+
+    .sidebar.collapsed {
+        margin-left: 0;
     }
     
     #content {
         margin-left: 0;
     }
+
+    #content.expanded {
+        margin-left: var(--sidebar-collapsed-width);
+    }
     
-    .class-item {
+    .stat-card .card-body {
         flex-direction: column;
-        gap: 15px;
+        text-align: center;
     }
     
-    .class-actions {
-        width: 100%;
-        justify-content: flex-start;
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 15px;
     }
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+@media print {
+    .sidebar,
+    .top-navbar,
+    .header-actions,
+    .footer {
+        display: none !important;
+    }
+    
+    #content {
+        margin-left: 0 !important;
+    }
+    
+    .main-content {
+        padding: 0 !important;
+    }
+}
+
+/* Make dropdown toggle clickable when sidebar is collapsed */
+.sidebar.collapsed .dropdown-toggle {
+    cursor: pointer;
+    pointer-events: auto !important;
+}
+
+.sidebar.collapsed .dropdown-toggle:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* Add visual feedback that item is clickable */
+.sidebar.collapsed ul li a {
+    cursor: pointer;
+    pointer-events: auto !important;
 }

@@ -451,8 +451,8 @@ GO
 SET IDENTITY_INSERT Users ON;
 INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status) VALUES
 (1, 1, N'admin', N'admin@123', N'Bùi Hải Đức', N'duc.bh@itcenter.edu', '0911111111', N'Active'),
-(2, 3, N'teacher01', N'teacher@123', N'Đặng Hoàng Huy', N'giaovu@itcenter.edu', '0922222222', N'Active'),
-(3, 2, N'student01', N'student@123', N'Đinh Quang Hưng', N'ketoan@itcenter.edu', '0933333333', N'Active');
+(2, 2, N'teacher01', N'teacher@123', N'Đặng Hoàng Huy', N'giaovu@itcenter.edu', '0922222222', N'Active'),
+(3, 3, N'student01', N'student@123', N'Đinh Quang Hưng', N'ketoan@itcenter.edu', '0933333333', N'Active');
 SET IDENTITY_INSERT Users OFF;
 GO
 

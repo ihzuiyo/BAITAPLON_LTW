@@ -1,0 +1,273 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    ViewData["Title"] = "Trang Chủ Giảng Viên";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-home"></i> Trang Chủ Giảng Viên</h1>
+        <p class="page-subtitle">Xin chào! Chào mừng bạn quay trở lại hệ thống quản lý giảng dạy.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print"></i> In Báo Cáo
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row dashboard-stats mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalClasses</div>
+                    <div class="stat-label">Lớp Đang Dạy</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a asp-action="MyClasses" class="view-details">Xem chi tiết <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@ViewBag.TotalStudents</div>
+                    <div class="stat-label">Tổng Học Viên</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">Tất cả các lớp <i class="fas fa-users"></i></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Sum(c => c.ClassSchedules.Count)</div>
+                    <div class="stat-label">Buổi Học/Tuần</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">Lịch giảng dạy <i class="fas fa-calendar-alt"></i></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count()</div>
+                    <div class="stat-label">Khóa Học</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="view-details">Đang phụ trách <i class="fas fa-book"></i></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Classes Overview -->
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chalkboard"></i> Lớp Học Của Tôi
+            </div>
+            <div class="card-body">
+                @if (Model != null && Model.Any())
+                {
+                    <div class="class-list">
+                        @foreach (var classItem in Model.Take(5))
+                        {
+                            var studentCount = classItem.Enrollments?.Count ?? 0;
+                            var scheduleText = classItem.ClassSchedules?.FirstOrDefault()?.Weekday ?? "Chưa có lịch";
+                            
+                            <div class="class-item">
+                                <div class="class-info">
+                                    <div class="class-name">
+                                        @classItem.ClassName
+                                        <span class="class-code">@classItem.ClassCode</span>
+                                    </div>
+                                    <p class="class-details mb-0">
+                                        <i class="fas fa-book"></i> <strong>Khóa học:</strong> @classItem.Course?.CourseName<br />
+                                        <i class="fas fa-users"></i> <strong>Học viên:</strong> @studentCount/@(classItem.MaxStudents ?? 0) sinh viên<br />
+                                        <i class="fas fa-calendar"></i> <strong>Lịch học:</strong> @scheduleText
+                                    </p>
+                                </div>
+                                <div class="class-actions">
+                                    <a asp-action="ClassStudents" asp-route-classId="@classItem.ClassId" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-users"></i> Học viên
+                                    </a>
+                                    <a asp-action="Scores" asp-route-classId="@classItem.ClassId" class="btn btn-sm btn-success">
+                                        <i class="fas fa-clipboard-list"></i> Điểm
+                                    </a>
+                                    <a asp-action="Attendance" asp-route-classId="@classItem.ClassId" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-calendar-check"></i> Điểm danh
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    @if (Model.Count() > 5)
+                    {
+                        <div class="text-center mt-3">
+                            <a asp-action="MyClasses" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> Xem tất cả @Model.Count() lớp học
+                            </a>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <h5>Chưa có lớp học nào</h5>
+                        <p>Hiện tại bạn chưa được phân công giảng dạy lớp nào.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Notifications -->
+    <div class="col-lg-4 mb-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-bolt"></i> Thao Tác Nhanh
+            </div>
+            <div class="card-body">
+                <div class="quick-actions">
+                    <a asp-action="MyClasses" class="quick-action-btn">
+                        <i class="fas fa-chalkboard"></i> Lớp của tôi
+                    </a>
+                    <a href="#" class="quick-action-btn">
+                        <i class="fas fa-clipboard-list"></i> Nhập điểm
+                    </a>
+                    <a href="#" class="quick-action-btn">
+                        <i class="fas fa-calendar-check"></i> Điểm danh
+                    </a>
+                    <a href="#" class="quick-action-btn">
+                        <i class="fas fa-calendar-alt"></i> Xem lịch dạy
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bell"></i> Thông Báo
+            </div>
+            <div class="card-body notification-list">
+                <div class="notification-item">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Nhắc nhở: Cập nhật điểm giữa kỳ trước ngày 15/12</p>
+                        <small class="notification-date">2 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-calendar-check"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">Buổi học hôm nay: Lớp C# WinForms 18:00</p>
+                        <small class="notification-date">5 giờ trước</small>
+                    </div>
+                </div>
+                <div class="notification-item">
+                    <i class="fas fa-users"></i>
+                    <div class="notification-content">
+                        <p class="notification-text">3 học viên mới đăng ký vào lớp của bạn</p>
+                        <small class="notification-date">1 ngày trước</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Overview -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calendar-week"></i> Lịch Dạy Tuần Này
+            </div>
+            <div class="card-body">
+                @if (Model != null && Model.Any())
+                {
+                    <div class="schedule-list">
+                        @foreach (var classItem in Model)
+                        {
+                            @foreach (var schedule in classItem.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>())
+                            {
+                                <div class="schedule-item">
+                                    <div class="schedule-time">
+                                        <div class="schedule-day">@schedule.Weekday</div>
+                                        <div class="schedule-hours">@schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")</div>
+                                    </div>
+                                    <div class="schedule-info">
+                                        <h6>@classItem.ClassName (@classItem.ClassCode)</h6>
+                                        <p>
+                                            <i class="fas fa-book"></i> @classItem.Course?.CourseName
+                                            @if (schedule.Room != null)
+                                            {
+                                                <span class="ms-3"><i class="fas fa-door-open"></i> @schedule.Room.RoomName</span>
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <h5>Không có lịch dạy</h5>
+                        <p>Bạn chưa có lịch dạy nào được lên lịch.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            console.log('Teacher Dashboard loaded');
+            
+            // Add hover effects
+            $('.class-item').hover(
+                function() {
+                    $(this).find('.class-actions').addClass('show');
+                },
+                function() {
+                    $(this).find('.class-actions').removeClass('show');
+                }
+            );
+        });
+    </script>
+}

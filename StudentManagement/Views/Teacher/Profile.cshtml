@@ -1,0 +1,97 @@
+﻿@model StudentManagement.Models.Teacher
+@{
+    ViewData["Title"] = "Hồ Sơ Cá Nhân";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-user"></i> Hồ Sơ Cá Nhân</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+            <i class="fas fa-edit"></i> Chỉnh Sửa
+        </button>
+        <button class="btn btn-warning">
+            <i class="fas fa-key"></i> Đổi Mật Khẩu
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="profile-avatar mb-3">
+                    <i class="fas fa-user-circle fa-5x text-primary"></i>
+                </div>
+                <h4>@Model?.FirstName @Model?.LastName</h4>
+                <p class="text-muted">@Model?.Specialization</p>
+                <span class="badge bg-success">Hoạt động</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông Tin Chi Tiết</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="30%">Mã giảng viên:</th>
+                        <td>@Model?.TeacherCode</td>
+                    </tr>
+                    <tr>
+                        <th>Email:</th>
+                        <td>@Model?.Email</td>
+                    </tr>
+                    <tr>
+                        <th>Số điện thoại:</th>
+                        <td>@Model?.PhoneNumber</td>
+                    </tr>
+                    <tr>
+                        <th>Chuyên môn:</th>
+                        <td>@Model?.Specialization</td>
+                    </tr>
+                    <tr>
+                        <th>Vai trò:</th>
+                        <td><span class="badge bg-primary">@Model?.User?.Role?.RoleName</span></td>
+                    </tr>
+                    <tr>
+                        <th>Ngày tham gia:</th>
+                        <td>@Model?.User?.DateCreated.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chalkboard-teacher"></i> Lớp Đang Phụ Trách</h5>
+            </div>
+            <div class="card-body">
+                @if (Model?.Classes != null && Model.Classes.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var classItem in Model.Classes)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">@classItem.ClassName</h6>
+                                        <small class="text-muted">@classItem.Course?.CourseName</small>
+                                    </div>
+                                    <span class="badge bg-info">@classItem.ClassCode</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Chưa có lớp học nào</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

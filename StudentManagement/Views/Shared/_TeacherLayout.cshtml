@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Classe369 Giảng Viên</title>
+    <title>@ViewData["Title"] - Classes369 Giảng Viên</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/teacher.css" asp-append-version="true" />
@@ -15,51 +15,80 @@
             <div class="sidebar-header">
                 <div class="logo-container">
                     <i class="fas fa-graduation-cap logo-icon"></i>
-                    <h3>CLASSE369</h3>
+                    <h3>CLASSES369</h3>
                 </div>
                 <p class="subtitle">Giảng Viên</p>
             </div>
 
             <ul class="list-unstyled components">
+                <!-- Trang Chủ -->
                 <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active" : "")">
-                    <a asp-controller="Teacher" asp-action="Dashboard">
-                        <i class="fas fa-home"></i> Trang Chủ
+                    <a asp-controller="Teacher" asp-action="Dashboard" data-title="Trang Chủ">
+                        <i class="fas fa-home"></i> <span class="menu-text">Trang Chủ</span>
                     </a>
                 </li>
+
+                <!-- Lớp Của Tôi -->
                 <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "MyClasses" ? "active" : "")">
-                    <a asp-controller="Teacher" asp-action="MyClasses">
-                        <i class="fas fa-chalkboard"></i> Lớp Của Tôi
+                    <a asp-controller="Teacher" asp-action="MyClasses" data-title="Lớp Của Tôi">
+                        <i class="fas fa-chalkboard"></i> <span class="menu-text">Lớp Của Tôi</span>
                     </a>
                 </li>
-                <li>
-                    <a href="#scoresSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
-                        <i class="fas fa-clipboard-list"></i> Quản Lý Điểm
+
+                <!-- Quản Lý Điểm (Parent with Children) - FIXED -->
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString()?.Contains("Score") == true ? "active" : "")">
+                    <a href="#scoresSubmenu" 
+                       data-bs-toggle="collapse" 
+                       aria-expanded="@(ViewContext.RouteData.Values["Action"]?.ToString()?.Contains("Score") == true ? "true" : "false")" 
+                       class="dropdown-toggle" 
+                       data-title="Quản Lý Điểm">
+                        <i class="fas fa-clipboard-list"></i> <span class="menu-text">Quản Lý Điểm</span>
                     </a>
-                    <ul class="collapse list-unstyled" id="scoresSubmenu">
-                        <li>
-                            <a href="#">Nhập Điểm</a>
+                    <ul class="collapse list-unstyled submenu @(ViewContext.RouteData.Values["Action"]?.ToString()?.Contains("Score") == true ? "show" : "")" 
+                        id="scoresSubmenu">
+                        <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "ScoresManagement" ? "active" : "")">
+                            <a asp-controller="Teacher" asp-action="ScoresManagement" data-title="Nhập Điểm">
+                                <i class="fas fa-edit"></i> <span class="menu-text">Nhập Điểm</span>
+                            </a>
                         </li>
-                        <li>
-                            <a href="#">Xem Điểm</a>
+                        <!-- FIXED: Changed to direct Scores view with a sample classId -->
+                        <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Scores" ? "active" : "")">
+                            <a asp-controller="Teacher" asp-action="Scores" data-title="Xem Điểm">
+                                <i class="fas fa-eye"></i> <span class="menu-text">Xem Điểm</span>
+                            </a>
                         </li>
                     </ul>
                 </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-calendar-check"></i> Điểm Danh
+
+                <!-- Điểm Danh -->
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "AttendanceManagement" || ViewContext.RouteData.Values["Action"]?.ToString() == "Attendance" ? "active" : "")">
+                    <a asp-controller="Teacher" asp-action="AttendanceManagement" data-title="Điểm Danh">
+                        <i class="fas fa-calendar-check"></i> <span class="menu-text">Điểm Danh</span>
                     </a>
                 </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-calendar-alt"></i> Lịch Giảng Dạy
+
+                <!-- Lịch Giảng Dạy -->
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "TeachingSchedule" ? "active" : "")">
+                    <a asp-controller="Teacher" asp-action="TeachingSchedule" data-title="Lịch Giảng Dạy">
+                        <i class="fas fa-calendar-alt"></i> <span class="menu-text">Lịch Giảng Dạy</span>
+                    </a>
+                </li>
+
+                <!-- Hồ Sơ Cá Nhân -->
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active" : "")">
+                    <a asp-controller="Teacher" asp-action="Profile" data-title="Hồ Sơ Cá Nhân">
+                        <i class="fas fa-user"></i> <span class="menu-text">Hồ Sơ Cá Nhân</span>
                     </a>
                 </li>
             </ul>
 
             <div class="sidebar-footer">
-                <a href="#" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Đăng Xuất
-                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm">
+                    @Html.AntiForgeryToken()
+                    <a href="#" class="logout-btn" data-title="Đăng Xuất">
+                        <i class="fas fa-sign-out-alt"></i> <span class="menu-text">Đăng Xuất</span>
+                    </a>
+                </form>
             </div>
         </nav>
 
@@ -67,10 +96,10 @@
         <div id="content">
             <nav class="navbar navbar-expand-lg navbar-light bg-light top-navbar">
                 <div class="container-fluid">
-                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info" title="Thu gọn/Mở rộng menu">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <div class="ml-auto d-flex align-items-center">
+                    <div class="ms-auto d-flex align-items-center">
                         <div class="user-info">
                             <i class="fas fa-user-circle"></i>
                             <span>Giảng Viên</span>

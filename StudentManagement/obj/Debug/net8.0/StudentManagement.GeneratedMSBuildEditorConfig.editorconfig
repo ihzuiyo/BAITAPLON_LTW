@@ -104,6 +104,42 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFxUdWl0aW9uLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/Attendance.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxBdHRlbmRhbmNlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/AttendanceManagement.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxBdHRlbmRhbmNlTWFuYWdlbWVudC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/ClassStudents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxDbGFzc1N0dWRlbnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/Dashboard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxEYXNoYm9hcmQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/MyClasses.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxNeUNsYXNzZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/Profile.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxQcm9maWxlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/Scores.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxTY29yZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/ScoresManagement.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxTY29yZXNNYW5hZ2VtZW50LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/Teacher/TeachingSchedule.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlclxUZWFjaGluZ1NjaGVkdWxlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/fifth_semester/Web_Programming_2024_Student/BTL_2025/BTL_LTW/BAITAPLON_LTW/StudentManagement/Views/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 

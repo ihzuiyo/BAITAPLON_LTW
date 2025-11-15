@@ -1,0 +1,33 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    ViewData["Title"] = "Quản Lý Điểm";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-clipboard-list"></i> Quản Lý Điểm Số</h1>
+    <p class="page-subtitle">Chọn lớp học để nhập hoặc xem điểm</p>
+</div>
+
+<div class="row">
+    @foreach (var classItem in Model)
+    {
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">@classItem.ClassName</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Khóa học:</strong> @classItem.Course?.CourseName</p>
+                    <p><strong>Mã lớp:</strong> @classItem.ClassCode</p>
+                    <p><strong>Học viên:</strong> @classItem.Enrollments?.Count</p>
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Scores" asp-route-classId="@classItem.ClassId" class="btn btn-primary btn-sm">
+                        <i class="fas fa-clipboard-list"></i> Quản lý điểm
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

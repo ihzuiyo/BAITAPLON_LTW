@@ -318,19 +318,29 @@ namespace StudentManagement.Controllers
             return View(model);
         }
 
-        // POST: Account/Logout
+        // GET or POST: Account/Logout (Supports both HTTP methods)
+        [HttpGet]
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             var userId = HttpContext.Session.GetInt32("UserId");
             
             if (userId.HasValue)
             {
-                await LogAction(userId.Value, "Logout", "User logged out");
+                // Log with the HTTP method used (GET or POST)
+                await LogAction(userId.Value, "Logout", $"User logged out via {Request.Method} from IP: {HttpContext.Connection.RemoteIpAddress}");
             }
 
+            // Clear all session data
             HttpContext.Session.Clear();
+            
+            // Also clear cookies if you're using authentication cookies
+            foreach (var cookie in Request.Cookies.Keys)
+            {
+                Response.Cookies.Delete(cookie);
+            }
+            
+            // Redirect to login page
             return RedirectToAction(nameof(Login));
         }
 
