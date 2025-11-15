@@ -1,0 +1,163 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    ViewData["Title"] = "Lớp Của Tôi";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title"><i class="fas fa-chalkboard"></i> Lớp Học Của Tôi</h1>
+        <p class="page-subtitle">Quản lý tất cả các lớp học bạn đang phụ trách</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Danh Sách
+        </button>
+        <button class="btn btn-primary">
+            <i class="fas fa-print"></i> In Lịch Dạy
+        </button>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchClass" placeholder="Tìm kiếm lớp học...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterCourse">
+                    <option value="">Tất cả khóa học</option>
+                    @foreach (var course in Model.Select(c => c.Course).Distinct())
+                    {
+                        <option value="@course?.CourseId">@course?.CourseName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="sortBy">
+                    <option value="name">Tên lớp A-Z</option>
+                    <option value="students">Số học viên</option>
+                    <option value="schedule">Lịch học</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Classes List -->
+@if (Model != null && Model.Any())
+{
+    <div class="row">
+        @foreach (var classItem in Model)
+        {
+            var studentCount = classItem.Enrollments?.Count ?? 0;
+            var maxStudents = classItem.MaxStudents ?? 0;
+            var percentage = maxStudents > 0 ? (studentCount * 100 / maxStudents) : 0;
+            var progressClass = percentage >= 90 ? "bg-danger" : percentage >= 70 ? "bg-warning" : "bg-success";
+            
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chalkboard-teacher"></i> @classItem.ClassName
+                            </h5>
+                            <span class="badge bg-light text-primary">@classItem.ClassCode</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-book"></i> Khóa Học
+                            </h6>
+                            <p class="mb-0">@classItem.Course?.CourseName</p>
+                            <small class="text-muted">Mã: @classItem.Course?.CourseCode</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-users"></i> Học Viên
+                            </h6>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span>@studentCount / @maxStudents học viên</span>
+                                <span class="badge @progressClass">@percentage%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @progressClass" role="progressbar" style="width: @percentage%"></div>
+                            </div>
+                        </div>
+
+                        @if (classItem.ClassSchedules != null && classItem.ClassSchedules.Any())
+                        {
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-calendar-alt"></i> Lịch Học
+                                </h6>
+                                @foreach (var schedule in classItem.ClassSchedules)
+                                {
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-info me-2">@schedule.Weekday</span>
+                                        <small>@schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")</small>
+                                        @if (schedule.Room != null)
+                                        {
+                                            <small class="ms-auto text-muted">
+                                                <i class="fas fa-door-open"></i> @schedule.Room.RoomName
+                                            </small>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer bg-light">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a asp-action="ClassStudents" asp-route-classId="@classItem.ClassId" 
+                               class="btn btn-sm btn-primary flex-fill">
+                                <i class="fas fa-users"></i> Học viên
+                            </a>
+                            <a asp-action="Scores" asp-route-classId="@classItem.ClassId" 
+                               class="btn btn-sm btn-success flex-fill">
+                                <i class="fas fa-clipboard-list"></i> Điểm số
+                            </a>
+                            <a asp-action="Attendance" asp-route-classId="@classItem.ClassId" 
+                               class="btn btn-sm btn-warning flex-fill">
+                                <i class="fas fa-calendar-check"></i> Điểm danh
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <h5>Chưa có lớp học nào</h5>
+                <p>Hiện tại bạn chưa được phân công giảng dạy lớp nào.</p>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchClass').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('.col-lg-6').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+}

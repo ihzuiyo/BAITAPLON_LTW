@@ -1,0 +1,17 @@
+# Bỏ qua các thư mục build của .NET
+[Oo]bj/
+[Bb]in/
+
+# Bỏ qua các tệp cài đặt người dùng của Visual Studio
+.vs/
+*.suo
+*.user
+
+# Bỏ qua các tệp tạm
+*.log
+*.db
+*.sqlite
+
+# Bỏ qua các tệp hệ điều hành
+.DS_Store
+Thumbs.db

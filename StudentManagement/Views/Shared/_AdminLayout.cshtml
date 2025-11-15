@@ -64,9 +64,12 @@
             </ul>
 
             <div class="sidebar-footer">
-                <a href="#" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Đăng Xuất
-                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm">
+                    @Html.AntiForgeryToken()
+                    <a href="#" class="logout-btn" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
+                        <i class="fas fa-sign-out-alt"></i> Đăng Xuất
+                    </a>
+                </form>
             </div>
         </nav>
 

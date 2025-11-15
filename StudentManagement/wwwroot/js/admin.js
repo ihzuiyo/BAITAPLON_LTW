@@ -29,7 +29,7 @@ $(document).ready(function () {
     }
 
     // ==========================================
-    // 2. LOGOUT FUNCTIONALITY
+    // 2. LOGOUT FUNCTIONALITY - FIXED
     // ==========================================
     $('.logout-btn').on('click', function (e) {
         e.preventDefault();
@@ -45,9 +45,9 @@ $(document).ready(function () {
             localStorage.removeItem('sidebarCollapsed');
             sessionStorage.clear();
             
-            // Redirect to logout action
+            // Submit the form
             setTimeout(function () {
-                window.location.href = '/Account/Logout';
+                $('#logoutForm').submit();
             }, 500);
         }
     });

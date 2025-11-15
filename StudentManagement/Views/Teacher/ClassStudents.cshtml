@@ -1,0 +1,224 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    ViewData["Title"] = "Danh Sách Học Viên";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    var classInfo = ViewBag.ClassInfo as StudentManagement.Models.Class;
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-users"></i> Danh Sách Học Viên
+        </h1>
+        <p class="page-subtitle">
+            Lớp: <strong>@classInfo?.ClassName</strong> (@classInfo?.ClassCode)
+        </p>
+    </div>
+    <div class="header-actions">
+        <a asp-action="MyClasses" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại
+        </a>
+        <button class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-primary">
+            <i class="fas fa-print"></i> In Danh Sách
+        </button>
+    </div>
+</div>
+
+<!-- Class Info Card -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count()</div>
+                    <div class="stat-label">Tổng Học Viên</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count(e => e.Status == "Enrolled")</div>
+                    <div class="stat-label">Đang Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">
+                        @classInfo?.Course?.CourseName?.Substring(0, Math.Min(3, classInfo?.Course?.CourseName?.Length ?? 0))
+                    </div>
+                    <div class="stat-label">Khóa Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@((classInfo?.MaxStudents > 0 ? (Model.Count() * 100 / classInfo.MaxStudents) : 0))%</div>
+                    <div class="stat-label">Tỉ Lệ Lấp Đầy</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Students Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list-ul"></i> Danh Sách Chi Tiết</h5>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-controls mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchStudent" placeholder="Tìm kiếm học viên...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterStatus">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Enrolled">Đang học</option>
+                        <option value="Completed">Hoàn thành</option>
+                        <option value="Dropped">Đã nghỉ</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortBy">
+                        <option value="name">Tên A-Z</option>
+                        <option value="code">Mã SV</option>
+                        <option value="date">Ngày ghi danh</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th width="5%">STT</th>
+                        <th width="10%">Mã SV</th>
+                        <th width="20%">Họ và Tên</th>
+                        <th width="15%">Email</th>
+                        <th width="12%">Số Điện Thoại</th>
+                        <th width="10%">Giới Tính</th>
+                        <th width="12%">Ngày Ghi Danh</th>
+                        <th width="10%">Trạng Thái</th>
+                        <th width="6%">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var index = 1;
+                    }
+                    @foreach (var enrollment in Model.OrderBy(e => e.Student?.FullName))
+                    {
+                        var student = enrollment.Student;
+                        var statusBadge = enrollment.Status switch
+                        {
+                            "Enrolled" => "bg-success",
+                            "Completed" => "bg-primary",
+                            "Dropped" => "bg-danger",
+                            _ => "bg-secondary"
+                        };
+                        var statusText = enrollment.Status switch
+                        {
+                            "Enrolled" => "Đang học",
+                            "Completed" => "Hoàn thành",
+                            "Dropped" => "Đã nghỉ",
+                            _ => enrollment.Status
+                        };
+                        
+                        <tr>
+                            <td><strong>@index</strong></td>
+                            <td>
+                                <span class="badge bg-info">@student?.StudentCode</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-2">
+                                        <i class="fas fa-user-graduate"></i>
+                                    </div>
+                                    <strong>@student?.FullName</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="fas fa-envelope text-muted"></i> @student?.Email
+                                </small>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(student?.PhoneNumber))
+                                {
+                                    <small>
+                                        <i class="fas fa-phone text-success"></i> @student.PhoneNumber
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">-</small>
+                                }
+                            </td>
+                            <td>@student?.Gender</td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i>
+                                    @enrollment.EnrollmentDate.ToString("dd/MM/yyyy")
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge @statusBadge">@statusText</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info" title="Chi tiết" data-bs-toggle="modal" data-bs-target="#studentDetailModal@student?.StudentId">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#searchStudent').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        });
+    </script>
+}

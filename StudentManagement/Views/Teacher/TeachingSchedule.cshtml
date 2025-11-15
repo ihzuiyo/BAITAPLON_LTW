@@ -1,0 +1,39 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    ViewData["Title"] = "Lịch Giảng Dạy";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-calendar-alt"></i> Lịch Giảng Dạy</h1>
+    <p class="page-subtitle">Xem lịch dạy trong tuần</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="schedule-list">
+            @foreach (var classItem in Model)
+            {
+                @foreach (var schedule in classItem.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>())
+                {
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <div class="schedule-day">@schedule.Weekday</div>
+                            <div class="schedule-hours">@schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")</div>
+                        </div>
+                        <div class="schedule-info">
+                            <h6>@classItem.ClassName (@classItem.ClassCode)</h6>
+                            <p>
+                                <i class="fas fa-book"></i> @classItem.Course?.CourseName
+                                @if (schedule.Room != null)
+                                {
+                                    <span class="ms-3"><i class="fas fa-door-open"></i> @schedule.Room.RoomName</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
