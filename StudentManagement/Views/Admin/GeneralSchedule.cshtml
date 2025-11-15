@@ -1,0 +1,76 @@
+﻿@model IEnumerable<StudentManagement.Models.ClassSchedule>
+@{
+    ViewData["Title"] = "Lịch Học Tổng Quan";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    // Tùy chọn: Nhóm các lịch học theo ngày trong tuần (giả định Weekday là kiểu string)
+    var schedulesByDay = Model
+        .GroupBy(s => s.Weekday)
+        .OrderBy(g => g.Key.Length); // Sắp xếp cơ bản: T2, T3, T4...
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title">
+        <i class="fas fa-calendar-alt"></i> Lịch Học Tổng Quan Trung Tâm
+    </h1>
+    <div class="header-actions">
+        <a asp-action="Classes" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Quản lý Lớp
+        </a>
+        <button class="btn btn-success">
+            <i class="fas fa-print"></i> In Lịch
+        </button>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-table"></i> Tổng số buổi học: @Model.Count()
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Ngày Học</th>
+                            <th>Thời Gian</th>
+                            <th>Lớp Học</th>
+                            <th>Khóa Học</th>
+                            <th>Giảng Viên</th>
+                            <th>Phòng Học</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var schedule in Model)
+                        {
+                            <tr>
+                                <td><strong class="text-info">@schedule.Weekday</strong></td>
+                                <td>@schedule.StartTime.ToString("HH:mm") - @schedule.EndTime.ToString("HH:mm")</td>
+                                <td>
+                                    <a asp-action="ClassDetails" asp-route-id="@schedule.ClassId">
+                                        @schedule.Class?.ClassName (@schedule.Class?.ClassCode)
+                                    </a>
+                                </td>
+                                <td>@schedule.Class?.Course?.CourseName</td>
+                                <td>
+                                    @(schedule.Class?.Teacher != null ? $"{schedule.Class.Teacher.FirstName} {schedule.Class.Teacher.LastName}" : "Trống")
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">@schedule.Room?.RoomName</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Hiện tại chưa có lịch học nào được thiết lập trong hệ thống.
+            </div>
+        }
+    </div>
+</div>

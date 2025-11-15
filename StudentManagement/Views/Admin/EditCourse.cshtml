@@ -1,0 +1,72 @@
+﻿@model StudentManagement.Models.Course
+@{
+    ViewData["Title"] = "Chỉnh Sửa Khóa Học";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Khóa Học: @Model.CourseName</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form asp-action="EditCourse" asp-controller="Admin" method="post">
+            @Html.AntiForgeryToken()
+            @* Trường ẩn CourseId để nhận biết khóa học đang chỉnh sửa *@
+            <input type="hidden" asp-for="CourseId" />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="CourseCode" class="form-label">Mã Khóa Học <span class="text-danger">*</span></label>
+                    <input asp-for="CourseCode" class="form-control" required />
+                    <span asp-validation-for="CourseCode" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="CourseName" class="form-label">Tên Khóa Học <span class="text-danger">*</span></label>
+                    <input asp-for="CourseName" class="form-control" required />
+                    <span asp-validation-for="CourseName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Mô Tả</label>
+                <textarea asp-for="Description" class="form-control" rows="4" placeholder="Mô tả về khóa học..."></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Duration" class="form-label">Thời Lượng <span class="text-danger">*</span></label>
+                    <input asp-for="Duration" class="form-control" placeholder="Ví dụ: 3 tháng" required />
+                    <span asp-validation-for="Duration" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="TuitionFee" class="form-label">Học Phí (VNĐ) <span class="text-danger">*</span></label>
+                    <input asp-for="TuitionFee" type="number" class="form-control" required />
+                    <span asp-validation-for="TuitionFee" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Credits" class="form-label">Credits</label>
+                    <input asp-for="Credits" type="number" class="form-control" />
+                    <span asp-validation-for="Credits" class="text-danger"></span>
+                </div>
+            </div>
+
+            <hr />
+            <div class="form-actions text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Thay Đổi
+                </button>
+                <a asp-action="Courses" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

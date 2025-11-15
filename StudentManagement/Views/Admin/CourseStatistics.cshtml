@@ -1,0 +1,149 @@
+﻿@model IEnumerable<StudentManagement.Models.ViewModels.CourseStatViewModel>
+@{
+    ViewData["Title"] = "Thống Kê Khóa Học";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-chart-pie"></i> Thống Kê Tổng Quan Khóa Học</h1>
+    <div class="header-actions">
+        <a asp-action="Courses" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Quản lý Khóa học
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card p-3 bg-light-info">
+            <p class="mb-0 text-muted">Tổng số Khóa học</p>
+            <h3 class="text-info">@Model.Count()</h3>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card p-3 bg-light-success">
+            <p class="mb-0 text-muted">Tổng Học viên Đăng ký</p>
+            <h3 class="text-success">@Model.Sum(m => m.TotalStudents)</h3>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6 mb-3">
+        <div class="card p-3 bg-light-primary">
+            <p class="mb-0 text-muted">Tổng Doanh thu Ước tính</p>
+            <h3 class="text-primary">@Model.Sum(m => m.EstimatedRevenue).ToString("N0") VNĐ</h3>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-chart-bar"></i> Top Khóa Học Phổ Biến (Theo số lượng học viên)
+            </div>
+            <div class="card-body">
+                <canvas id="studentChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-money-bill-wave"></i> Khóa Học Đóng Góp Doanh Thu Lớn Nhất
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-secondary text-white">
+        <i class="fas fa-table"></i> Bảng Phân Tích Chi Tiết
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>Khóa Học</th>
+                        <th>Học Phí</th>
+                        <th>Tổng Lớp</th>
+                        <th>Tổng Học Viên</th>
+                        <th>Doanh Thu Ước Tính</th>
+                        <th>Tỷ Lệ HV</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var totalStudentsOverall = Model.Sum(m => m.TotalStudents);
+                    }
+                    @foreach (var item in Model)
+                    {
+                        var percentage = totalStudentsOverall > 0 ? (item.TotalStudents * 100.0 / totalStudentsOverall) : 0;
+                        <tr>
+                            <td><strong>@item.CourseName</strong> (@item.CourseCode)</td>
+                            <td>@item.TuitionFee.ToString("N0") VNĐ</td>
+                            <td>@item.TotalClasses</td>
+                            <td><span class="badge bg-success">@item.TotalStudents</span></td>
+                            <td>@item.EstimatedRevenue.ToString("N0") VNĐ</td>
+                            <td>@percentage.ToString("F1")%</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @* KẾT NỐI THƯ VIỆN BIỂU ĐỒ (Ví dụ: Chart.js) *@
+    @* <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> *@ 
+
+        <script>
+        // Dữ liệu từ Model (Chuyển đổi sang JS array)
+        const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(m => m.CourseCode).ToArray()));
+        const studentData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(m => m.TotalStudents).ToArray()));
+        const revenueData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(m => m.EstimatedRevenue / 1000000).ToArray())); // Chia cho 1 triệu
+
+        // --- Biểu đồ Học viên ---
+        if (document.getElementById('studentChart')) {
+            new Chart(document.getElementById('studentChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Số lượng Học viên',
+                        data: studentData,
+                        backgroundColor: 'rgba(255, 159, 64, 0.8)', // Orange
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // --- Biểu đồ Doanh thu ---
+        if (document.getElementById('revenueChart')) {
+            new Chart(document.getElementById('revenueChart'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh thu (Triệu VNĐ)',
+                        data: revenueData,
+                        backgroundColor: [
+                            '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'
+                        ],
+                        hoverOffset: 4
+                    }]
+                }
+            });
+        }
+    </script>
+}

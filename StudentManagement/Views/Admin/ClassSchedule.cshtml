@@ -1,0 +1,84 @@
+﻿@model IEnumerable<StudentManagement.Models.ClassSchedule>
+@{
+    // Lấy ClassItem từ ViewBag
+    var classItem = ViewBag.ClassItem as StudentManagement.Models.Class;
+
+    ViewData["Title"] = "Lịch Học Lớp: " + classItem?.ClassName;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title">
+        <i class="fas fa-calendar-alt"></i> Lịch Học Lớp:
+        <strong>@classItem?.ClassName</strong> (@classItem?.ClassCode)
+    </h1>
+    <div class="header-actions">
+        <a asp-action="Classes" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại Danh sách Lớp
+        </a>
+        <a asp-action="EditClass" asp-route-id="@classItem?.ClassId" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Quản lý Lịch & Phòng
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white"><i class="fas fa-book-open"></i> Thông Tin Lớp</div>
+            <div class="card-body">
+                <p><strong>Khóa học:</strong> @classItem?.Course?.CourseName</p>
+                <p><strong>Giảng viên:</strong> @(classItem?.Teacher != null ? $"{classItem.Teacher.FirstName} {classItem.Teacher.LastName}" : "Chưa phân công")</p>
+                <p><strong>Sĩ số tối đa:</strong> @classItem?.MaxStudents</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-warning text-dark">
+        <i class="fas fa-list-ul"></i> Chi Tiết Các Buổi Học (@Model.Count() buổi)
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ngày Trong Tuần</th>
+                            <th>Thời Gian Bắt Đầu</th>
+                            <th>Thời Gian Kết Thúc</th>
+                            <th>Phòng Học</th>
+                            <th>Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var schedule in Model)
+                        {
+                            <tr>
+                                <td><strong class="text-primary">@schedule.Weekday</strong></td>
+                                <td>@schedule.StartTime.ToString("HH:mm")</td>
+                                <td>@schedule.EndTime.ToString("HH:mm")</td>
+                                <td>
+                                    <span class="badge bg-success">@schedule.Room?.RoomName</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" title="Chỉnh sửa buổi học">
+                                        <i class="fas fa-tools"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Lớp học này chưa có lịch học nào được thiết lập.
+            </div>
+        }
+    </div>
+</div>
