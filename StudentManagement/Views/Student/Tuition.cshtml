@@ -2,129 +2,489 @@
 @{
     ViewData["Title"] = "Học Phí";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var totalFee = Model.Sum(t => t.TotalFee);
+    var totalPaid = Model.Sum(t => t.AmountPaid);
+    var totalRemaining = totalFee - totalPaid;
+    var paidCount = Model.Count(t => t.Status == "Paid");
+    var overdueCount = Model.Count(t => t.Status == "Overdue");
 }
 
 <div class="dashboard-header">
-    <h1 class="page-title"><i class="fas fa-money-bill-wave"></i> Quản Lý Học Phí</h1>
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-money-bill-wave"></i> Quản Lý Học Phí
+        </h1>
+        <p class="page-subtitle">Theo dõi và thanh toán học phí của bạn</p>
+    </div>
     <div class="header-actions">
-        <button class="btn btn-success">
-            <i class="fas fa-file-invoice"></i> Lịch Sử Thanh Toán
+        <button class="btn btn-success" onclick="exportTuitionToExcel()">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#paymentHistoryModal">
+            <i class="fas fa-history"></i> Lịch Sử
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> In
         </button>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-8">
-        @foreach (var tuition in Model)
-        {
-            var remaining = tuition.TotalFee - tuition.AmountPaid;
-            var percentPaid = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
-            
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">@tuition.Enrollment.Class.ClassName - @tuition.Enrollment.Class.Course.CourseName</h5>
-                    <span class="badge @(tuition.Status == "Paid" ? "bg-success" : tuition.Status == "Pending" ? "bg-warning" : "bg-danger")">
-                        @tuition.Status
-                    </span>
+<!-- Financial Statistics -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-coins"></i>
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Tổng Học Phí:</strong> @tuition.TotalFee.ToString("N0") VNĐ</p>
-                            <p><strong>Đã Đóng:</strong> @tuition.AmountPaid.ToString("N0") VNĐ</p>
-                            <p><strong>Còn Lại:</strong> <span class="text-danger">@remaining.ToString("N0") VNĐ</span></p>
+                <div class="stat-details">
+                    <div class="stat-number">@totalFee.ToString("N0")</div>
+                    <div class="stat-label">Tổng Học Phí</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small>Tổng cộng tất cả các lớp</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@totalPaid.ToString("N0")</div>
+                    <div class="stat-label">Đã Thanh Toán</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small>@paidCount/@Model.Count() lớp đã đóng</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@totalRemaining.ToString("N0")</div>
+                    <div class="stat-label">Còn Lại</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small>Cần thanh toán</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-red">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@overdueCount</div>
+                    <div class="stat-label">Quá Hạn</div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small>Cần xử lý gấp</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tuition List -->
+    <div class="col-lg-8">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var tuition in Model)
+            {
+                var classItem = tuition.Enrollment?.Class;
+                var course = classItem?.Course;
+                var remaining = tuition.TotalFee - tuition.AmountPaid;
+                var percentPaid = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
+                var isOverdue = tuition.DueDate.HasValue && 
+                               tuition.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now && 
+                               remaining > 0;
+                
+                var statusBadge = tuition.Status switch
+                {
+                    "Paid" => "bg-success",
+                    "Pending" => "bg-warning text-dark",
+                    "Overdue" => "bg-danger",
+                    _ => "bg-secondary"
+                };
+                
+                var statusText = tuition.Status switch
+                {
+                    "Paid" => "Đã thanh toán",
+                    "Pending" => "Chưa thanh toán",
+                    "Overdue" => "Quá hạn",
+                    _ => tuition.Status
+                };
+                
+                <div class="card mb-4 tuition-card @(isOverdue ? "border-danger" : "")">
+                    <div class="card-header d-flex justify-content-between align-items-center @(isOverdue ? "bg-danger text-white" : "")">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fas fa-chalkboard"></i> @classItem?.ClassName
+                            </h5>
+                            <small class="@(isOverdue ? "text-white" : "text-muted")">
+                                <i class="fas fa-book"></i> @course?.CourseName
+                            </small>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Hạn Đóng:</strong> @tuition.DueDate?.ToString("dd/MM/yyyy")</p>
-                            @if (tuition.DueDate.HasValue && tuition.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now && remaining > 0)
+                        <span class="badge @statusBadge fs-6">@statusText</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="tuition-info-item">
+                                    <div class="info-label">
+                                        <i class="fas fa-money-bill-wave text-primary"></i> Tổng Học Phí
+                                    </div>
+                                    <div class="info-value">
+                                        <strong>@tuition.TotalFee.ToString("N0") VNĐ</strong>
+                                    </div>
+                                </div>
+                                <div class="tuition-info-item">
+                                    <div class="info-label">
+                                        <i class="fas fa-check-circle text-success"></i> Đã Đóng
+                                    </div>
+                                    <div class="info-value text-success">
+                                        <strong>@tuition.AmountPaid.ToString("N0") VNĐ</strong>
+                                    </div>
+                                </div>
+                                <div class="tuition-info-item">
+                                    <div class="info-label">
+                                        <i class="fas fa-exclamation-circle text-danger"></i> Còn Lại
+                                    </div>
+                                    <div class="info-value text-danger">
+                                        <strong>@remaining.ToString("N0") VNĐ</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="tuition-info-item">
+                                    <div class="info-label">
+                                        <i class="fas fa-calendar-alt text-info"></i> Hạn Đóng
+                                    </div>
+                                    <div class="info-value @(isOverdue ? "text-danger fw-bold" : "")">
+                                        @if (tuition.DueDate.HasValue)
+                                        {
+                                            @tuition.DueDate.Value.ToString("dd/MM/yyyy")
+                                            @if (isOverdue)
+                                            {
+                                                <br><small class="text-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> Quá hạn
+                                                </small>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Chưa có</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="tuition-info-item">
+                                    <div class="info-label">
+                                        <i class="fas fa-barcode text-secondary"></i> Mã Lớp
+                                    </div>
+                                    <div class="info-value">
+                                        <span class="badge bg-secondary">@classItem?.ClassCode</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="payment-progress mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Tiến độ thanh toán</small>
+                                <small class="fw-bold text-primary">@percentPaid.ToString("F1")%</small>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar @(percentPaid == 100 ? "bg-success" : percentPaid >= 50 ? "bg-info" : "bg-warning")" 
+                                     role="progressbar" 
+                                     style="width: @percentPaid%" 
+                                     aria-valuenow="@percentPaid" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    @percentPaid.ToString("F0")%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tuition-actions">
+                            @if (remaining > 0)
                             {
-                                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Quá hạn</p>
+                                <button class="btn btn-primary" onclick="openPaymentModal(@tuition.TuitionId, '@classItem?.ClassName', @remaining)">
+                                    <i class="fas fa-credit-card"></i> Thanh Toán
+                                </button>
                             }
+                            else
+                            {
+                                <button class="btn btn-success" disabled>
+                                    <i class="fas fa-check-circle"></i> Đã Hoàn Thành
+                                </button>
+                            }
+                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#receiptModal">
+                                <i class="fas fa-receipt"></i> Xem Biên Lai
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="progress mb-3" style="height: 25px;">
-                        <div class="progress-bar @(percentPaid == 100 ? "bg-success" : "bg-primary")" 
-                             role="progressbar" 
-                             style="width: @percentPaid%" 
-                             aria-valuenow="@percentPaid" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            @percentPaid.ToString("F0")%
-                        </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">Chưa có thông tin học phí</h5>
+                        <p class="text-muted">Bạn chưa có khoản học phí nào cần thanh toán.</p>
                     </div>
-                    
-                    @if (remaining > 0)
-                    {
-                        <button class="btn btn-primary">
-                            <i class="fas fa-credit-card"></i> Thanh Toán
-                        </button>
-                    }
                 </div>
             </div>
         }
     </div>
 
+    <!-- Payment Info Sidebar -->
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-info-circle"></i> Hướng Dẫn Thanh Toán
+        <div class="card mb-3 sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Hướng Dẫn Thanh Toán
+                </h5>
             </div>
             <div class="card-body">
-                <h6>Thông Tin Chuyển Khoản:</h6>
-                <p><strong>Ngân hàng:</strong> Vietcombank</p>
-                <p><strong>Số tài khoản:</strong> 0123456789</p>
-                <p><strong>Chủ tài khoản:</strong> Trung Tâm Tin Học Classe369</p>
-                <p><strong>Nội dung:</strong> MSSV + Họ Tên</p>
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-university text-primary"></i> Thông Tin Chuyển Khoản
+                </h6>
                 
-                <hr>
-                
-                <h6>Lưu Ý:</h6>
-                <ul class="small">
-                    <li>Vui lòng ghi rõ mã sinh viên trong nội dung chuyển khoản</li>
-                    <li>Học phí sẽ được cập nhật sau 1-2 giờ làm việc</li>
-                    <li>Liên hệ phòng kế toán nếu có thắc mắc</li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="card mt-3">
-            <div class="card-header">
-                <i class="fas fa-history"></i> Lịch Sử Gần Đây
-            </div>
-            <div class="card-body">
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-date">15/01/2025</div>
-                        <div class="timeline-content">
-                            <strong>Thanh toán 2,000,000 VNĐ</strong>
-                            <p class="small text-muted mb-0">Lập Trình Web - Kỳ 1/2025</p>
+                <div class="bank-info">
+                    <div class="bank-item">
+                        <div class="bank-label">Ngân hàng:</div>
+                        <div class="bank-value">Vietcombank</div>
+                    </div>
+                    <div class="bank-item">
+                        <div class="bank-label">Số tài khoản:</div>
+                        <div class="bank-value">
+                            <strong>0123456789</strong>
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('0123456789')">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="timeline-item">
-                        <div class="timeline-date">10/01/2025</div>
-                        <div class="timeline-content">
-                            <strong>Thanh toán 1,500,000 VNĐ</strong>
-                            <p class="small text-muted mb-0">Cơ Sở Dữ Liệu - Kỳ 1/2025</p>
+                    <div class="bank-item">
+                        <div class="bank-label">Chủ tài khoản:</div>
+                        <div class="bank-value">Trung Tâm Tin Học Classes369</div>
+                    </div>
+                    <div class="bank-item">
+                        <div class="bank-label">Nội dung:</div>
+                        <div class="bank-value">
+                            <strong class="text-danger">MSSV + Họ Tên</strong>
                         </div>
                     </div>
                 </div>
+                
+                <hr>
+                
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-exclamation-circle text-warning"></i> Lưu Ý Quan Trọng
+                </h6>
+                <ul class="notes-list">
+                    <li>Vui lòng ghi <strong>chính xác</strong> mã sinh viên trong nội dung chuyển khoản</li>
+                    <li>Học phí sẽ được cập nhật sau <strong>1-2 giờ</strong> làm việc</li>
+                    <li>Liên hệ phòng kế toán: <strong>0123-456-789</strong> nếu có thắc mắc</li>
+                    <li>Lưu biên lai chuyển khoản để đối chiếu khi cần</li>
+                    <li>Thanh toán trước hạn để tránh bị khóa tài khoản</li>
+                </ul>
+                
+                <hr>
+                
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-phone text-success"></i> Liên Hệ Hỗ Trợ
+                </h6>
+                <div class="contact-info">
+                    <p class="mb-2">
+                        <i class="fas fa-phone-alt text-success"></i> Hotline: <strong>1900-xxxx</strong>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-envelope text-primary"></i> Email: <strong>ketoan@classes369.edu.vn</strong>
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-clock text-warning"></i> Giờ làm việc: <strong>8:00 - 17:00 (T2-T6)</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment History Modal -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-history"></i> Lịch Sử Thanh Toán
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-date">15/01/2025 - 09:30</div>
+                            <div class="timeline-title">Thanh toán 2,000,000 VNĐ</div>
+                            <div class="timeline-desc">
+                                Lớp: Lập Trình Web - Kỳ 1/2025<br>
+                                Phương thức: Chuyển khoản
+                            </div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-date">10/01/2025 - 14:15</div>
+                            <div class="timeline-title">Thanh toán 1,500,000 VNĐ</div>
+                            <div class="timeline-desc">
+                                Lớp: Cơ Sở Dữ Liệu - Kỳ 1/2025<br>
+                                Phương thức: Tiền mặt
+                            </div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-date">05/01/2025 - 10:00</div>
+                            <div class="timeline-title">Ghi danh lớp mới</div>
+                            <div class="timeline-desc">
+                                Lớp: Lập Trình C# WinForms<br>
+                                Học phí: 2,500,000 VNĐ
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-file-pdf"></i> Xuất PDF
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        .tuition-card {
+            transition: all 0.3s;
+        }
+        
+        .tuition-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+        }
+        
+        .tuition-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .tuition-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            text-align: right;
+        }
+        
+        .tuition-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .tuition-actions .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .bank-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .bank-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e3e6f0;
+        }
+        
+        .bank-item:last-child {
+            border-bottom: none;
+        }
+        
+        .bank-label {
+            font-weight: 600;
+            color: #5a5c69;
+            min-width: 120px;
+        }
+        
+        .bank-value {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .notes-list {
+            font-size: 13px;
+            padding-left: 20px;
+            color: #5a5c69;
+        }
+        
+        .notes-list li {
+            margin-bottom: 8px;
+        }
+        
+        .contact-info {
+            font-size: 14px;
+        }
+        
         .timeline {
             position: relative;
-            padding-left: 20px;
+            padding-left: 30px;
         }
         
         .timeline::before {
             content: '';
             position: absolute;
-            left: 0;
+            left: 8px;
             top: 0;
             bottom: 0;
             width: 2px;
@@ -133,19 +493,18 @@
         
         .timeline-item {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
-        .timeline-item::before {
-            content: '';
+        .timeline-marker {
             position: absolute;
-            left: -24px;
+            left: -26px;
             top: 5px;
-            width: 10px;
-            height: 10px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            background: #5DADE2;
-            border: 2px solid #fff;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 3px #e3e6f0;
         }
         
         .timeline-date {
@@ -153,5 +512,69 @@
             color: #6c757d;
             margin-bottom: 5px;
         }
+        
+        .timeline-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #2e59d9;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-desc {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        
+        @@media print {
+            .header-actions,
+            .tuition-actions,
+            .card-footer,
+            .col-lg-4 {
+                display: none !important;
+            }
+        }
     </style>
+    
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Đã sao chép: ' + text);
+            });
+        }
+        
+        function openPaymentModal(tuitionId, className, remaining) {
+            alert(`Thanh toán cho lớp: ${className}\nSố tiền: ${remaining.toLocaleString('vi-VN')} VNĐ`);
+            // TODO: Implement payment modal
+        }
+        
+        function exportTuitionToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            wsData.push(['THÔNG TIN HỌC PHÍ']);
+            wsData.push([]);
+            wsData.push(['Lớp', 'Khóa Học', 'Tổng HP', 'Đã Đóng', 'Còn Lại', 'Hạn Đóng', 'Trạng Thái']);
+            
+            @foreach (var t in Model)
+            {
+                var remaining = t.TotalFee - t.AmountPaid;
+                <text>
+                wsData.push([
+                    '@t.Enrollment?.Class?.ClassName',
+                    '@t.Enrollment?.Class?.Course?.CourseName',
+                    @t.TotalFee,
+                    @t.AmountPaid,
+                    @remaining,
+                    '@(t.DueDate?.ToString("dd/MM/yyyy") ?? "")',
+                    '@t.Status'
+                ]);
+                </text>
+            }
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Học Phí');
+            XLSX.writeFile(wb, 'HocPhi.xlsx');
+        }
+    </script>
 }

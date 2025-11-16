@@ -1,0 +1,419 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    ViewData["Title"] = "Điểm Số Của Tôi";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var totalClasses = Model.Count();
+    var classesWithScores = Model.Count(e => e.Scores != null && e.Scores.Any());
+    var completedClasses = Model.Count(e => e.Status == "Completed");
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-chart-bar"></i> Điểm Số Của Tôi
+        </h1>
+        <p class="page-subtitle">Xem và theo dõi kết quả học tập của bạn</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-success" onclick="exportScoresToExcel()">
+            <i class="fas fa-file-excel"></i> Xuất Điểm
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> In Bảng Điểm
+        </button>
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#chartModal">
+            <i class="fas fa-chart-pie"></i> Biểu Đồ
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@totalClasses</div>
+                    <div class="stat-label">Tổng Lớp Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@classesWithScores</div>
+                    <div class="stat-label">Đã Có Điểm</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@completedClasses</div>
+                    <div class="stat-label">Hoàn Thành</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-details">
+                    @{
+                        var avgScore = 0.0;
+                        if (classesWithScores > 0)
+                        {
+                            var allAvg = Model.Where(e => e.Scores != null && e.Scores.Any())
+                                .Select(e => {
+                                    var attendance = e.Scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Chuyên cần")?.ScoreValue ?? 0;
+                                    var midterm = e.Scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Giữa kỳ")?.ScoreValue ?? 0;
+                                    var final = e.Scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Cuối kỳ")?.ScoreValue ?? 0;
+                                    return (double)((attendance * 0.1m) + (midterm * 0.3m) + (final * 0.6m));
+                                }).ToList();
+                            avgScore = allAvg.Any() ? allAvg.Average() : 0;
+                        }
+                    }
+                    <div class="stat-number">@avgScore.ToString("F2")</div>
+                    <div class="stat-label">Điểm TB Chung</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scores List -->
+@if (Model != null && Model.Any())
+{
+    @foreach (var enrollment in Model)
+    {
+        var classItem = enrollment.Class;
+        var course = classItem?.Course;
+        var scores = enrollment.Scores?.ToList() ?? new List<StudentManagement.Models.Score>();
+        
+        var attendanceScore = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Chuyên cần")?.ScoreValue ?? 0;
+        var midtermScore = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Giữa kỳ")?.ScoreValue ?? 0;
+        var finalScore = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Cuối kỳ")?.ScoreValue ?? 0;
+        
+        var hasScores = scores.Any();
+        var averageScore = hasScores ? (attendanceScore * 0.1m) + (midtermScore * 0.3m) + (finalScore * 0.6m) : 0;
+        
+        var classification = !hasScores ? "Chưa có điểm" :
+                           averageScore >= 8.5m ? "Giỏi" :
+                           averageScore >= 7.0m ? "Khá" :
+                           averageScore >= 5.5m ? "Trung Bình" :
+                           averageScore >= 4.0m ? "Yếu" : "Kém";
+        
+        var classificationBadge = classification switch
+        {
+            "Giỏi" => "bg-success",
+            "Khá" => "bg-info",
+            "Trung Bình" => "bg-warning text-dark",
+            "Yếu" => "bg-danger",
+            "Kém" => "bg-dark",
+            _ => "bg-secondary"
+        };
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chalkboard"></i> @classItem?.ClassName
+                        <span class="badge bg-light text-primary ms-2">@classItem?.ClassCode</span>
+                    </h5>
+                    <span class="badge @classificationBadge fs-6">@classification</span>
+                </div>
+                <small>@course?.CourseName</small>
+            </div>
+            <div class="card-body">
+                @if (hasScores)
+                {
+                    <div class="row">
+                        <!-- Score Details -->
+                        <div class="col-md-8">
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-clipboard-list"></i> Chi Tiết Điểm Số
+                            </h6>
+                            
+                            <div class="score-table">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="40%">Loại Điểm</th>
+                                            <th width="20%" class="text-center">Hệ Số</th>
+                                            <th width="20%" class="text-center">Điểm</th>
+                                            <th width="20%" class="text-center">Điểm TB</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-calendar-check text-primary"></i> Chuyên Cần
+                                            </td>
+                                            <td class="text-center">10%</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@attendanceScore.ToString("F1")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <strong>@((attendanceScore * 0.1m).ToString("F2"))</strong>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-file-alt text-info"></i> Giữa Kỳ
+                                            </td>
+                                            <td class="text-center">30%</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@midtermScore.ToString("F1")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <strong>@((midtermScore * 0.3m).ToString("F2"))</strong>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-pen-fancy text-success"></i> Cuối Kỳ
+                                            </td>
+                                            <td class="text-center">60%</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@finalScore.ToString("F1")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <strong>@((finalScore * 0.6m).ToString("F2"))</strong>
+                                            </td>
+                                        </tr>
+                                        <tr class="table-primary">
+                                            <td colspan="3" class="text-end">
+                                                <strong>Điểm Trung Bình:</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <strong class="text-primary fs-5">@averageScore.ToString("F2")</strong>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Score Chart -->
+                        <div class="col-md-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-chart-pie"></i> Phân Bố Điểm
+                            </h6>
+                            <div class="score-chart-container">
+                                <canvas id="scoreChart_@enrollment.EnrollmentId" width="250" height="250"></canvas>
+                            </div>
+                            
+                            <div class="mt-3 text-center">
+                                <div class="classification-display p-3 rounded" 
+                                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <h6 class="text-white mb-1">Xếp Loại</h6>
+                                    <h3 class="text-white mb-0">@classification</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state text-center py-4">
+                        <i class="fas fa-clipboard fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Chưa có điểm số</h6>
+                        <p class="text-muted mb-0">Điểm số sẽ được cập nhật sau khi giảng viên nhập điểm</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">Chưa có dữ liệu điểm</h5>
+                <p class="text-muted">Bạn chưa đăng ký lớp học nào.</p>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Chart Modal -->
+<div class="modal fade" id="chartModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line"></i> Biểu Đồ Học Tập Tổng Quát
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="overallChart" width="600" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .score-chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .classification-display {
+            border: 3px solid #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        @@media print {
+            .header-actions,
+            .btn {
+                display: none !important;
+            }
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize individual score charts
+            @foreach (var enrollment in Model)
+            {
+                var scores = enrollment.Scores?.ToList() ?? new List<StudentManagement.Models.Score>();
+                if (scores.Any())
+                {
+                    var attendance = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Chuyên cần")?.ScoreValue ?? 0;
+                    var midterm = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Giữa kỳ")?.ScoreValue ?? 0;
+                    var final = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Cuối kỳ")?.ScoreValue ?? 0;
+                    
+                    <text>
+                    const ctx_@enrollment.EnrollmentId = document.getElementById('scoreChart_@enrollment.EnrollmentId');
+                    if (ctx_@enrollment.EnrollmentId) {
+                        new Chart(ctx_@enrollment.EnrollmentId, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Chuyên Cần (10%)', 'Giữa Kỳ (30%)', 'Cuối Kỳ (60%)'],
+                                datasets: [{
+                                    data: [@attendance, @midterm, @final],
+                                    backgroundColor: [
+                                        'rgba(78, 115, 223, 0.8)',
+                                        'rgba(28, 200, 138, 0.8)',
+                                        'rgba(246, 194, 62, 0.8)'
+                                    ]
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    </text>
+                }
+            }
+            
+            // Initialize overall chart when modal is shown
+            $('#chartModal').on('shown.bs.modal', function() {
+                const ctx = document.getElementById('overallChart');
+                if (ctx && !ctx.chartInstance) {
+                    ctx.chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: [
+                                @foreach (var e in Model)
+                                {
+                                    <text>'@e.Class?.ClassName',</text>
+                                }
+                            ],
+                            datasets: [{
+                                label: 'Điểm Trung Bình',
+                                data: [
+                                    @foreach (var e in Model)
+                                    {
+                                        var scores = e.Scores?.ToList() ?? new List<StudentManagement.Models.Score>();
+                                        var avg = 0.0m;
+                                        if (scores.Any())
+                                        {
+                                            var a = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Chuyên cần")?.ScoreValue ?? 0;
+                                            var m = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Giữa kỳ")?.ScoreValue ?? 0;
+                                            var f = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Cuối kỳ")?.ScoreValue ?? 0;
+                                            avg = (a * 0.1m) + (m * 0.3m) + (f * 0.6m);
+                                        }
+                                        <text>@avg,</text>
+                                    }
+                                ],
+                                backgroundColor: 'rgba(78, 115, 223, 0.8)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 10
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        
+        function exportScoresToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            wsData.push(['BẢNG ĐIỂM CỦA TÔI']);
+            wsData.push([]);
+            wsData.push(['Lớp', 'Khóa Học', 'CC', 'GK', 'CK', 'TB', 'Xếp Loại']);
+            
+            @foreach (var e in Model)
+            {
+                var scores = e.Scores?.ToList() ?? new List<StudentManagement.Models.Score>();
+                var a = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Chuyên cần")?.ScoreValue ?? 0;
+                var m = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Giữa kỳ")?.ScoreValue ?? 0;
+                var f = scores.FirstOrDefault(s => s.ScoreType?.ScoreTypeName == "Cuối kỳ")?.ScoreValue ?? 0;
+                var avg = (a * 0.1m) + (m * 0.3m) + (f * 0.6m);
+                var cls = avg >= 8.5m ? "Giỏi" : avg >= 7.0m ? "Khá" : avg >= 5.5m ? "TB" : avg >= 4.0m ? "Yếu" : "Kém";
+                
+                <text>
+                wsData.push(['@e.Class?.ClassName', '@e.Class?.Course?.CourseName', @a, @m, @f, @avg.ToString("F2"), '@cls']);
+                </text>
+            }
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Điểm Số');
+            XLSX.writeFile(wb, 'BangDiem.xlsx');
+        }
+    </script>
+}

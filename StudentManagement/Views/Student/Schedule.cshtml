@@ -1,0 +1,551 @@
+﻿@model IEnumerable<StudentManagement.Models.Enrollment>
+@{
+    ViewData["Title"] = "Thời Khóa Biểu";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var weekDays = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+    var weekDaysVi = new Dictionary<string, string>
+    {
+        { "Monday", "Thứ Hai" },
+        { "Tuesday", "Thứ Ba" },
+        { "Wednesday", "Thứ Tư" },
+        { "Thursday", "Thứ Năm" },
+        { "Friday", "Thứ Sáu" },
+        { "Saturday", "Thứ Bảy" },
+        { "Sunday", "Chủ Nhật" }
+    };
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-calendar-alt"></i> Thời Khóa Biểu
+        </h1>
+        <p class="page-subtitle">
+            Lịch học trong tuần - Tổng <strong>@Model.Sum(e => e.Class?.ClassSchedules?.Count ?? 0)</strong> buổi học
+        </p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary" id="toggleView">
+            <i class="fas fa-table"></i> Đổi Chế Độ
+        </button>
+        <button class="btn btn-success" onclick="exportScheduleToExcel()">
+            <i class="fas fa-file-excel"></i> Xuất Excel
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> In Lịch
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-blue">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Count()</div>
+                    <div class="stat-label">Lớp Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-green">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="stat-details">
+                    <div class="stat-number">@Model.Sum(e => e.Class?.ClassSchedules?.Count ?? 0)</div>
+                    <div class="stat-label">Buổi/Tuần</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-orange">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-details">
+                    @{
+                        var totalHours = 0.0;
+                        foreach (var e in Model)
+                        {
+                            if (e.Class?.ClassSchedules != null)
+                            {
+                                foreach (var s in e.Class.ClassSchedules)
+                                {
+                                    totalHours += (s.EndTime.ToTimeSpan() - s.StartTime.ToTimeSpan()).TotalHours;
+                                }
+                            }
+                        }
+                    }
+                    <div class="stat-number">@totalHours.ToString("F1")</div>
+                    <div class="stat-label">Giờ Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card stat-card-teal">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="stat-details">
+                    @{
+                        var uniqueDays = Model
+                            .SelectMany(e => e.Class?.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>())
+                            .Select(s => s.Weekday)
+                            .Distinct()
+                            .Count();
+                    }
+                    <div class="stat-number">@uniqueDays</div>
+                    <div class="stat-label">Ngày Học</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Toggle Tabs -->
+<ul class="nav nav-tabs mb-3" id="scheduleViewTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#listView" type="button">
+            <i class="fas fa-list"></i> Dạng Danh Sách
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="calendar-tab" data-bs-toggle="tab" data-bs-target="#calendarView" type="button">
+            <i class="fas fa-calendar-week"></i> Dạng Lịch Tuần
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="scheduleViewContent">
+    <!-- LIST VIEW -->
+    <div class="tab-pane fade show active" id="listView" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-ul"></i> Lịch Học Chi Tiết
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model != null && Model.Any() && Model.SelectMany(e => e.Class?.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>()).Any())
+                {
+                    @foreach (var day in weekDays)
+                    {
+                        var daySchedules = Model
+                            .SelectMany(e => e.Class?.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>(),
+                                (e, s) => new { Enrollment = e, Schedule = s })
+                            .Where(x => x.Schedule.Weekday == day)
+                            .OrderBy(x => x.Schedule.StartTime)
+                            .ToList();
+
+                        @if (daySchedules.Any())
+                        {
+                            <div class="day-section mb-4">
+                                <div class="day-header">
+                                    <i class="fas fa-calendar-day text-primary"></i>
+                                    <strong>@weekDaysVi[day]</strong>
+                                    <span class="badge bg-primary ms-2">@daySchedules.Count buổi</span>
+                                </div>
+                                
+                                @foreach (var item in daySchedules)
+                                {
+                                    var classItem = item.Enrollment.Class;
+                                    var schedule = item.Schedule;
+                                    var duration = (schedule.EndTime.ToTimeSpan() - schedule.StartTime.ToTimeSpan()).TotalHours;
+                                    
+                                    <div class="schedule-item">
+                                        <div class="schedule-time">
+                                            <div class="time-badge">
+                                                <i class="fas fa-clock"></i>
+                                                @schedule.StartTime.ToString("HH:mm")
+                                            </div>
+                                            <div class="time-separator">-</div>
+                                            <div class="time-badge">
+                                                <i class="fas fa-clock"></i>
+                                                @schedule.EndTime.ToString("HH:mm")
+                                            </div>
+                                            <span class="duration-badge">
+                                                @duration.ToString("0.#")h
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="schedule-info flex-grow-1">
+                                            <div class="class-header">
+                                                <h6 class="mb-1">
+                                                    <i class="fas fa-chalkboard text-primary"></i>
+                                                    @classItem?.ClassName
+                                                    <span class="badge bg-info ms-2">@classItem?.ClassCode</span>
+                                                </h6>
+                                            </div>
+                                            
+                                            <div class="class-details">
+                                                <span class="detail-item">
+                                                    <i class="fas fa-book text-success"></i>
+                                                    @classItem?.Course?.CourseName
+                                                </span>
+                                                
+                                                @if (schedule.Room != null)
+                                                {
+                                                    <span class="detail-item">
+                                                        <i class="fas fa-door-open text-warning"></i>
+                                                        @schedule.Room.RoomName
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="schedule-actions">
+                                            <a asp-action="MyClasses" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">Chưa có lịch học</h5>
+                        <p class="text-muted">Bạn chưa có lịch học nào được lên lịch.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- CALENDAR VIEW -->
+    <div class="tab-pane fade" id="calendarView" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-week"></i> Lịch Tuần
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered weekly-calendar mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="12%" class="time-column">Giờ</th>
+                                @foreach (var day in weekDays)
+                                {
+                                    <th width="12.5%" class="text-center">
+                                        <div class="day-header-cell">
+                                            <div class="day-name">@weekDaysVi[day]</div>
+                                            <div class="day-count">
+                                                @{
+                                                    var dayCount = Model
+                                                        .SelectMany(e => e.Class?.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>())
+                                                        .Count(s => s.Weekday == day);
+                                                }
+                                                <span class="badge bg-primary">@dayCount</span>
+                                            </div>
+                                        </div>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var timeSlots = new[]
+                                {
+                                    new { Start = new TimeOnly(7, 0), End = new TimeOnly(9, 0), Label = "07:00 - 09:00" },
+                                    new { Start = new TimeOnly(9, 0), End = new TimeOnly(11, 0), Label = "09:00 - 11:00" },
+                                    new { Start = new TimeOnly(13, 0), End = new TimeOnly(15, 0), Label = "13:00 - 15:00" },
+                                    new { Start = new TimeOnly(15, 0), End = new TimeOnly(17, 0), Label = "15:00 - 17:00" },
+                                    new { Start = new TimeOnly(18, 0), End = new TimeOnly(20, 0), Label = "18:00 - 20:00" },
+                                    new { Start = new TimeOnly(20, 0), End = new TimeOnly(22, 0), Label = "20:00 - 22:00" }
+                                };
+                            }
+                            
+                            @foreach (var slot in timeSlots)
+                            {
+                                <tr>
+                                    <td class="time-cell">
+                                        <strong>@slot.Label</strong>
+                                    </td>
+                                    @foreach (var day in weekDays)
+                                    {
+                                        var cellSchedules = Model
+                                            .SelectMany(e => e.Class?.ClassSchedules ?? Enumerable.Empty<StudentManagement.Models.ClassSchedule>(),
+                                                (e, s) => new { Enrollment = e, Schedule = s })
+                                            .Where(x => x.Schedule.Weekday == day && 
+                                                       x.Schedule.StartTime >= slot.Start && 
+                                                       x.Schedule.StartTime < slot.End)
+                                            .ToList();
+                                        
+                                        <td class="schedule-cell @(cellSchedules.Any() ? "has-schedule" : "")">
+                                            @foreach (var item in cellSchedules)
+                                            {
+                                                var classItem = item.Enrollment.Class;
+                                                var schedule = item.Schedule;
+                                                
+                                                <div class="calendar-event">
+                                                    <div class="event-time">
+                                                        <i class="fas fa-clock"></i>
+                                                        @schedule.StartTime.ToString("HH:mm")
+                                                    </div>
+                                                    <div class="event-title">@classItem?.ClassName</div>
+                                                    <div class="event-room">
+                                                        <i class="fas fa-door-open"></i>
+                                                        @(schedule.Room?.RoomName ?? "TBA")
+                                                    </div>
+                                                </div>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* List View Styles */
+        .day-section {
+            border-left: 4px solid #4e73df;
+            padding-left: 20px;
+        }
+        
+        .day-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4e73df;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e3e6f0;
+        }
+        
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: #fff;
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .schedule-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .schedule-time {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            margin-right: 20px;
+        }
+        
+        .time-badge {
+            background: #4e73df;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .time-separator {
+            color: #858796;
+            font-weight: bold;
+        }
+        
+        .duration-badge {
+            background: #1cc88a;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .schedule-info {
+            flex: 1;
+        }
+        
+        .class-header h6 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2e59d9;
+        }
+        
+        .class-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        
+        .detail-item {
+            font-size: 13px;
+            color: #5a5c69;
+        }
+        
+        .detail-item i {
+            margin-right: 5px;
+        }
+        
+        /* Calendar View Styles */
+        .weekly-calendar {
+            font-size: 13px;
+        }
+        
+        .weekly-calendar th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            padding: 15px 10px;
+            vertical-align: middle;
+        }
+        
+        .day-header-cell {
+            text-align: center;
+        }
+        
+        .day-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #2e59d9;
+            margin-bottom: 5px;
+        }
+        
+        .time-cell {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .schedule-cell {
+            padding: 5px;
+            min-height: 80px;
+            vertical-align: top;
+            background-color: #fff;
+        }
+        
+        .schedule-cell.has-schedule {
+            background-color: #e7f3ff;
+        }
+        
+        .calendar-event {
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .calendar-event:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .event-time {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        
+        .event-title {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .event-room {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        
+        @@media (max-width: 768px) {
+            .schedule-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .schedule-time {
+                margin-bottom: 10px;
+            }
+        }
+        
+        @@media print {
+            .header-actions,
+            .nav-tabs {
+                display: none !important;
+            }
+        }
+    </style>
+    
+    <script>
+        function exportScheduleToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            wsData.push(['THỜI KHÓA BIỂU']);
+            wsData.push([]);
+            wsData.push(['Ngày', 'Thời Gian', 'Lớp Học', 'Khóa Học', 'Phòng']);
+            
+            const weekDaysVi = {
+                'Monday': 'Thứ Hai',
+                'Tuesday': 'Thứ Ba',
+                'Wednesday': 'Thứ Tư',
+                'Thursday': 'Thứ Năm',
+                'Friday': 'Thứ Sáu',
+                'Saturday': 'Thứ Bảy',
+                'Sunday': 'Chủ Nhật'
+            };
+            
+            @foreach (var e in Model)
+            {
+                if (e.Class?.ClassSchedules != null)
+                {
+                    foreach (var s in e.Class.ClassSchedules)
+                    {
+                        <text>
+                        wsData.push([
+                            weekDaysVi['@s.Weekday'],
+                            '@s.StartTime.ToString("HH:mm")' + ' - ' + '@s.EndTime.ToString("HH:mm")',
+                            '@e.Class.ClassName',
+                            '@e.Class.Course?.CourseName',
+                            '@(s.Room?.RoomName ?? "N/A")'
+                        ]);
+                        </text>
+                    }
+                }
+            }
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Thời Khóa Biểu');
+            XLSX.writeFile(wb, 'ThoiKhoaBieu.xlsx');
+        }
+    </script>
+}
