@@ -10,7 +10,7 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">
             <i class="fas fa-plus"></i> Thêm Khóa Học
         </button>
-        <button class="btn btn-success">
+        <button class="btn btn-success" onclick="exportCoursesToExcel()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
         @* Sửa nút Thống Kê thành thẻ <a> trỏ đến Action CourseStatistics *@
@@ -343,6 +343,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .course-stat-card {
             border-radius: 10px;
@@ -744,7 +745,37 @@
 
 
         });
+        function exportCoursesToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
 
+            // 1. Chuẩn bị Header
+            wsData.push(['DANH SÁCH KHÓA HỌC']);
+            wsData.push([]);
+            wsData.push(['STT', 'Mã Khóa', 'Tên Khóa Học', 'Mô Tả', 'Thời Lượng', 'Học Phí', 'Lớp/HV']);
+
+            let stt = 1;
+
+            // Lấy dữ liệu từ các hàng đang hiển thị trong <tbody> của TABLE VIEW
+            $('#tableViewContent tbody tr:visible').each(function() {
+                const $row = $(this);
+
+                // Trích xuất dữ liệu từ các cột theo thứ tự của bảng (1-9)
+                const courseCode = $row.find('td:nth-child(2) .badge').text().trim();
+                const courseName = $row.find('td:nth-child(3) strong').text().trim();
+                const description = $row.find('td:nth-child(4) small').text().trim().replace(/\.\.\.$/, ''); // Loại bỏ ...
+                const duration = $row.find('td:nth-child(5) .badge').text().trim().replace('fas fa-clock', '').trim();
+                const tuitionFee = $row.find('td:nth-child(6) strong').text().trim();
+                const classStats = $row.find('td:nth-child(7) .course-stats').text().trim().replace(/\n/g, ' ').replace(/\s{2,}/g, ' '); // Lớp/HV
+
+                wsData.push([stt++, courseCode, courseName, description, duration, tuitionFee, classStats]);
+            });
+
+            // 3. Ghi file
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachKhoaHoc');
+            XLSX.writeFile(wb, 'DanhSachKhoaHoc.xlsx');
+        }
 
     </script>
 }

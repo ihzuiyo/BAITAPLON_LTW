@@ -7,7 +7,7 @@
 --GO
 
 USE QLSV_TrungTamTinHoc
-GO
+--GO
 
 /* ===================================
    PHẦN 1: TẠO CẤU TRÚC (SCHEMA)

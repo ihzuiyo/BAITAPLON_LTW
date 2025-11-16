@@ -10,12 +10,12 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
             <i class="fas fa-user-plus"></i> Thêm Người Dùng
         </button>
-        <button class="btn btn-success">
+        <button class="btn btn-success" onclick="exportUsersToExcel()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
-        <button class="btn btn-warning">
+        @* <button class="btn btn-warning">
             <i class="fas fa-file-excel"></i> Phân quyền
-        </button>
+        </button> *@
     </div>
 </div>
 
@@ -162,8 +162,8 @@
                         
                         var statusBadge = user.Status == "Active" ? "bg-success" : "bg-danger";
                         var statusText = user.Status == "Active" ? "Hoạt động" : "Không hoạt động";
-                        
-                        <tr>
+
+                        <tr data-user-id="@user.UserId">
                             <td><input type="checkbox" class="row-checkbox"></td>
                             <td><strong class="text-primary">#@user.UserId</strong></td>
                             <td>
@@ -363,8 +363,61 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="changeRoleModal" tabindex="-1" aria-labelledby="changeRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="changeRoleModalLabel">
+                    <i class="fas fa-file-excel"></i> Phân Quyền Hàng Loạt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
+            <form id="changeRoleForm" asp-controller="Admin" asp-action="ChangeRoles" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+                    <p>Bạn đang thay đổi vai trò cho <strong id="selectedUserCount">0</strong> người dùng được chọn.</p>
+
+                    <input type="hidden" name="UserIds" id="selectedUserIds" />
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-user-tag"></i> Chọn Vai Trò Mới <span class="text-danger">*</span></label>
+                        @* Dùng ViewBag.Roles để đổ dữ liệu *@
+                        <select class="form-select" name="NewRoleId" required>
+                            <option value="">-- Chọn vai trò mới --</option>
+                            @if (ViewBag.Roles is List<StudentManagement.Models.Role> roles)
+                            {
+                                @foreach (var role in roles)
+                                {
+                                    <option value="@role.RoleId">@role.RoleName</option>
+                                }
+                            }
+                            else
+                            {
+                                @* Fallback nếu không có ViewBag.Roles *@
+                                <option value="1">Admin</option>
+                                <option value="2">Teacher</option>
+                                <option value="3">Student</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-sync-alt"></i> Cập Nhật Vai Trò
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .user-stat-card {
             border-radius: 10px;
@@ -448,6 +501,57 @@
     </style>
     
     <script>
+
+        function parseDate(dateString) {
+            if (!dateString) return new Date(0);
+            var parts = dateString.split('/');
+            // Trả về YYYY, MM-1, DD
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+
+        function exportUsersToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            // Headers
+            wsData.push(['DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG']);
+            wsData.push([]);
+            wsData.push(['STT', 'ID', 'Họ và Tên', 'Username', 'Email', 'Số Điện Thoại', 'Vai Trò', 'Trạng Thái', 'Ngày Tạo']);
+            
+            let stt = 1;
+            
+            // Lấy dữ liệu từ các hàng đang hiển thị trong <tbody>
+                $('tbody tr:visible').each(function() {
+            const $row = $(this);
+
+            // --- SỬA LỖI TRÍCH XUẤT DỮ LIỆU ---
+            const userId = $row.find('td:nth-child(2) strong').text().trim().replace('#', '');
+            const fullName = $row.find('td:nth-child(3) strong').text().trim();
+
+            // SỬA: Lấy username bằng cách loại bỏ icon/khoảng trắng
+            const usernameFullText = $row.find('td:nth-child(4)').text().trim();
+            const username = usernameFullText.replace(/fas fa-at\s*/i, '').trim();
+
+            const email = $row.find('td:nth-child(5) small').text().trim();
+
+            // SỬA: Loại bỏ icon và khoảng trắng khỏi số điện thoại
+            const phoneNumber = $row.find('td:nth-child(6) small').text().trim().replace(/fas fa-phone\s*/i, '').trim() || 'N/A';
+
+            const role = $row.find('td:nth-child(7) .badge').text().trim();
+            const status = $row.find('td:nth-child(8) .badge').text().trim();
+            const dateCreated = $row.find('td:nth-child(9) small').text().trim().replace('fas fa-calendar', '').trim();
+
+            wsData.push([stt++, userId, fullName, username, email, phoneNumber, role, status, dateCreated]);
+        });
+            
+            // Ghi file
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachNguoiDung');
+            XLSX.writeFile(wb, 'DanhSachNguoiDung.xlsx');
+        }
+
+
+
         $(document).ready(function() {
             
 
@@ -566,6 +670,11 @@
             $('#filterStatus').on('change', applyFiltersAndSorting);
             $('#sortBy').on('change', applyFiltersAndSorting);
 
+
+
+
+
+
             
 
             // Chạy hàm khi tải trang để áp dụng sắp xếp và lọc mặc định (newest)
@@ -585,6 +694,49 @@
             $('#selectAll').click(function() {
                 $('.row-checkbox').prop('checked', this.checked);
             });
+        });
+
+
+
+
+         $('.header-actions button.btn-warning').on('click', function() {
+            var selectedIds = [];
+
+            // Lặp qua các checkbox được chọn trong các hàng đang hiển thị
+            $('tbody tr:visible .row-checkbox:checked').each(function() {
+                // Lấy ID người dùng từ thuộc tính data-user-id của thẻ <tr>
+                var userId = $(this).closest('tr').data('user-id');
+                if (userId) {
+                    selectedIds.push(userId);
+                }
+            });
+
+            if (selectedIds.length === 0) {
+                alert('Vui lòng chọn ít nhất một người dùng để phân quyền.');
+                return;
+            }
+
+            // Đưa danh sách ID vào trường ẩn trong Modal
+            $('#selectedUserIds').val(selectedIds.join(','));
+            // Cập nhật số lượng người dùng được chọn
+            $('#selectedUserCount').text(selectedIds.length);
+
+            // Hiển thị Modal
+            $('#changeRoleModal').modal('show');
+        });
+
+        // Logic chọn tất cả (cần đặt lại vì bạn có hai đoạn JS ready)
+        $('#selectAll').on('click', function() {
+            $('.row-checkbox').prop('checked', this.checked);
+        });
+
+        // Bổ sung: Logic để chỉ chọn checkbox trên các hàng đang hiển thị
+        $('#filterRole, #filterStatus, #searchUser, #entriesPerPage, #sortBy').on('change keyup', function() {
+            // Gọi lại hàm lọc
+            applyFiltersAndSorting();
+            // Sau khi lọc, bỏ chọn tất cả checkbox để tránh nhầm lẫn
+            $('#selectAll').prop('checked', false);
+            $('.row-checkbox').prop('checked', false);
         });
     </script>
 }

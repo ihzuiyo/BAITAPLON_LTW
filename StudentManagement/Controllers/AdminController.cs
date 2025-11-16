@@ -45,13 +45,89 @@ namespace StudentManagement.Controllers
                 .Include(s => s.Status)
                 .ToListAsync();
 
-            .Include(s => s.User)
-
-            .Include(s => s.Status)
-
-            .ToListAsync();
-
             return View(students);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateStudent(string StudentCode,string Username,string Password,string ConfirmPassword,string FullName,DateTime? DateOfBirth,string Gender,
+        string Email,string PhoneNumber,string Address,int StatusId)
+        {
+            // 1. KIỂM TRA VALIDATION CƠ BẢN
+            if (Password != ConfirmPassword)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu và Xác nhận Mật khẩu không khớp.";
+                // Tái tạo lại dữ liệu cho form (tùy chọn)
+                ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+                return View("Students"); // Trả về lại View danh sách sinh viên
+            }
+
+            // Kiểm tra trùng lặp (ví dụ: Username và Email)
+            if (await _context.Users.AnyAsync(u => u.Username == Username || u.Email == Email))
+            {
+                TempData["ErrorMessage"] = "Username hoặc Email đã tồn tại trong hệ thống.";
+                ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+                return View("Students");
+            }
+
+            // Kiểm tra trùng lặp Mã SV
+            if (await _context.Students.AnyAsync(s => s.StudentCode == StudentCode))
+            {
+                TempData["ErrorMessage"] = "Mã sinh viên đã tồn tại.";
+                ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+                return View("Students");
+            }
+
+            // 2. TẠO TÀI KHOẢN USER
+            try
+            {
+                // Giả sử RoleId cho Sinh viên là 3 (theo database bạn cung cấp)
+                int studentRoleId = 3;
+
+                var newUser = new User
+                {
+                    RoleId = studentRoleId,
+                    Username = Username,
+                    PasswordHash = Password, // Lưu trữ Tạm thời (nên dùng thư viện Hashing thực tế!)
+                    FullName = FullName,
+                    Email = Email,
+                    PhoneNumber = PhoneNumber,
+                    Status = "Active",
+                    DateCreated = DateTime.Now
+                };
+                _context.Users.Add(newUser);
+                // Lưu trước để lấy UserId (Id là Auto-Increment)
+                await _context.SaveChangesAsync();
+
+                // 3. TẠO THÔNG TIN SINH VIÊN
+                var newStudent = new Student
+                {
+                    UserId = newUser.UserId, // Gán UserId vừa tạo
+                    StatusId = StatusId,
+                    StudentCode = StudentCode,
+                    FullName = FullName,
+                    DateOfBirth = DateOfBirth.HasValue ? DateOnly.FromDateTime(DateOfBirth.Value) : (DateOnly?)null,
+                    Gender = Gender,
+                    Address = Address,
+                    PhoneNumber = PhoneNumber,
+                    Email = Email
+                };
+                _context.Students.Add(newStudent);
+
+                // 4. LƯU THAY ĐỔI CUỐI CÙNG
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Đã thêm sinh viên {FullName} ({StudentCode}) thành công!";
+                return RedirectToAction("Students");
+            }
+            catch (Exception ex)
+            {
+                // Ghi log lỗi vào hệ thống log
+                // _logger.LogError(ex, "Lỗi khi tạo sinh viên mới.");
+
+                TempData["ErrorMessage"] = "Lỗi hệ thống: Không thể thêm sinh viên. Vui lòng kiểm tra log.";
+                return RedirectToAction("Students");
+            }
         }
 
 
@@ -105,72 +181,6 @@ namespace StudentManagement.Controllers
             TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc (Mã lớp, Tên lớp, Khóa học).";
             return RedirectToAction(nameof(Classes));
         }
-
-        // GET: /Admin/ExportClassesToExcel
-        //public async Task<IActionResult> ExportClassesToExcel()
-        //{
-        //    // Lấy dữ liệu đầy đủ từ CSDL
-        //    var classes = await _context.Classes
-        //        .Include(c => c.Course)
-        //        .Include(c => c.Teacher)
-        //        .Include(c => c.Enrollments)
-        //        .Include(c => c.ClassSchedules)
-        //        .ToListAsync();
-
-        //    using (var package = new ExcelPackage())
-        //    {
-        //        var worksheet = package.Workbook.Worksheets.Add("DanhSachLopHoc");
-
-        //        // --- Cột Header ---
-        //        worksheet.Cells[1, 1].Value = "Mã Lớp";
-        //        worksheet.Cells[1, 2].Value = "Tên Lớp";
-        //        worksheet.Cells[1, 3].Value = "Khóa Học";
-        //        worksheet.Cells[1, 4].Value = "Giảng Viên";
-        //        worksheet.Cells[1, 5].Value = "Sĩ Số Tối Đa";
-        //        worksheet.Cells[1, 6].Value = "Số HV Đăng Ký";
-        //        worksheet.Cells[1, 7].Value = "Tình Trạng";
-
-        //        // Định dạng Header (Tùy chọn)
-        //        using (var range = worksheet.Cells[1, 1, 1, 7])
-        //        {
-        //            range.Style.Font.Bold = true;
-        //            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        //            range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
-        //        }
-
-        //        // --- Đổ dữ liệu ---
-        //        int row = 2;
-        //        foreach (var classItem in classes)
-        //        {
-        //            var enrollmentCount = classItem.Enrollments?.Count ?? 0;
-        //            var maxStudents = classItem.MaxStudents ?? 0;
-        //            var statusText = (maxStudents > 0 && enrollmentCount >= maxStudents) ? "Gần Đầy" : "Còn Chỗ";
-
-        //            worksheet.Cells[row, 1].Value = classItem.ClassCode;
-        //            worksheet.Cells[row, 2].Value = classItem.ClassName;
-        //            worksheet.Cells[row, 3].Value = classItem.Course?.CourseName;
-        //            worksheet.Cells[row, 4].Value = classItem.Teacher != null
-        //                ? $"{classItem.Teacher.FirstName} {classItem.Teacher.LastName}"
-        //                : "Chưa phân công";
-        //            worksheet.Cells[row, 5].Value = maxStudents;
-        //            worksheet.Cells[row, 6].Value = enrollmentCount;
-        //            worksheet.Cells[row, 7].Value = statusText;
-
-        //            row++;
-        //        }
-
-        //        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-        //        // --- Trả về File Excel ---
-        //        var stream = new MemoryStream();
-        //        package.SaveAs(stream);
-        //        stream.Position = 0;
-
-        //        string excelName = $"Classes_Export_{DateTime.Now.ToString("yyyyMMddHHmmss")}.xlsx";
-
-        //        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
-        //    }
-        //}
 
         // GET: /Admin/GeneralSchedule
         public async Task<IActionResult> GeneralSchedule()
@@ -584,6 +594,58 @@ namespace StudentManagement.Controllers
 
             return RedirectToAction(nameof(Users));
         }
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> ChangeRoles(string userIds, int newRoleId)
+        //{
+        //    if (string.IsNullOrEmpty(userIds) || newRoleId <= 0)
+        //    {
+        //        TempData["ErrorMessage"] = "Dữ liệu không hợp lệ. Vui lòng chọn người dùng và vai trò mới.";
+        //        return RedirectToAction("Users");
+        //    }
+
+        //    // Chuyển chuỗi ID thành danh sách các số nguyên
+        //    var idList = userIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //                        .Select(id => int.TryParse(id.Trim(), out int userId) ? userId : (int?)null)
+        //                        .Where(id => id.HasValue)
+        //                        .Select(id => id.Value)
+        //                        .ToList();
+
+        //    if (!idList.Any())
+        //    {
+        //        TempData["ErrorMessage"] = "Không có người dùng nào hợp lệ được chọn.";
+        //        return RedirectToAction("Users");
+        //    }
+
+        //    try
+        //    {
+        //        // 1. Lấy tất cả người dùng cần cập nhật từ Database (chỉ cần lấy các trường cơ bản)
+        //        var usersToUpdate = await _context.Users
+        //            .Where(u => idList.Contains(u.UserId))
+        //            .ToListAsync();
+
+        //        // 2. Cập nhật thuộc tính RoleId cho từng người dùng
+        //        foreach (var user in usersToUpdate)
+        //        {
+        //            user.RoleId = newRoleId;
+        //        }
+
+        //        // 3. Lưu thay đổi vào database
+        //        await _context.SaveChangesAsync();
+
+        //        TempData["SuccessMessage"] = $"Đã cập nhật vai trò cho **{idList.Count}** người dùng thành công! Vui lòng tải lại trang để xem sự thay đổi.";
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Ghi log lỗi để debug
+        //        // _logger.LogError(ex, "Lỗi khi cập nhật vai trò người dùng."); 
+        //        TempData["ErrorMessage"] = $"Lỗi khi phân quyền: Không thể lưu thay đổi vào cơ sở dữ liệu. Chi tiết: {ex.Message}";
+        //    }
+
+        //    return RedirectToAction("Users");
+        //}
+
 
         // GET: /Admin/UserDetails/5
         public async Task<IActionResult> UserDetails(int id)

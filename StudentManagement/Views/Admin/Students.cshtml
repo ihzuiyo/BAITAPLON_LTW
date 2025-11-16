@@ -10,7 +10,7 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
             <i class="fas fa-plus"></i> Thêm Sinh Viên
         </button>
-        <button class="btn btn-success">
+        <button class="btn btn-success" onclick="exportStudentsToExcel()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
     </div>
@@ -68,15 +68,15 @@
                                         statusName == "Bảo lưu" ? "bg-warning" : 
                                         statusName == "Tốt nghiệp" ? "bg-info" : 
                                         "bg-secondary";
-                        
-                        <tr>
+
+                        <tr data-student-id="@student.StudentId">
                             <td><input type="checkbox" class="row-checkbox"></td>
                             <td><strong>@student.StudentCode</strong></td>
                             <td>@student.FullName</td>
                             <td>@student.DateOfBirth?.ToString("dd/MM/yyyy")</td>
                             <td>@student.Gender</td>
-                            <td>@student.Email</td>
-                            <td>@student.PhoneNumber</td>
+                            <td>@student.User?.Email</td>
+                            <td>@student.User?.PhoneNumber</td>
                             <td>
                                 <span class="badge @badgeClass">
                                     @statusName
@@ -119,7 +119,6 @@
     </div>
 </div>
 
-@* Modal
 <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
@@ -129,21 +128,22 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
             <div class="modal-body">
-                
+
                 <form id="addStudentForm" asp-controller="Admin" asp-action="CreateStudent" method="post">
                     @Html.AntiForgeryToken()
 
-                    
-                    <h6 class="mb-3 text-primary"><i class="fas fa-lock"></i> I. Thông tin Tài khoản</h6>
+
+                    <h6 class="mb-3 text-primary"><i class="fas fa-lock"></i> I. Thông tin Tài khoản (UserID)</h6>
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Mã SV <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="StudentCode" required placeholder="SVxxxx">
+                            <input type="text" class="form-control" name="StudentCode" required placeholder="Ví dụ: SV007">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Username <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="Username" required placeholder="user.name">
+                            <input type="text" class="form-control" name="Username" required placeholder="tên.người.dùng">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
@@ -155,8 +155,8 @@
                         </div>
                     </div>
 
-                    
-                    <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> II. Thông tin Cá nhân</h6>
+
+                    <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> II. Thông tin Cá nhân (Student & User Details)</h6>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Họ và Tên <span class="text-danger">*</span></label>
@@ -188,7 +188,8 @@
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
                             <select class="form-select" name="StatusId" required>
-                                {{-- Dữ liệu Statuses được tải vào ViewBag.StudentStatuses trong AdminController.Students() --}}
+                                <option value="">-- Chọn trạng thái --</option>
+                                @* Đổ dữ liệu từ ViewBag.StudentStatuses *@
                                 @if (ViewBag.StudentStatuses is List<StudentManagement.Models.StudentStatus> statuses)
                                 {
                                     @foreach (var status in statuses)
@@ -206,6 +207,7 @@
                     </div>
                 </form>
             </div>
+
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
@@ -216,4 +218,125 @@
             </div>
         </div>
     </div>
-</div> *@
+</div>
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+       
+
+    <script>
+        // HÀM XUẤT EXCEL CHO DANH SÁCH SINH VIÊN
+                function exportStudentsToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+
+            // 1. Headers (Tiêu đề)
+            wsData.push(['DANH SÁCH SINH VIÊN']);
+            wsData.push([]);
+            wsData.push(['STT', 'Mã SV', 'Họ và Tên', 'Ngày Sinh', 'Giới Tính', 'Email', 'Số Điện Thoại', 'Trạng Thái']);
+
+            let stt = 1;
+
+            // 2. Trích xuất Dữ liệu từ các hàng đang hiển thị
+            $('tbody tr:visible').each(function() {
+                const $row = $(this);
+
+                // Trích xuất dữ liệu từ các ô (TD)
+                // Cột 2: Mã SV
+                const studentCode = $row.find('td:nth-child(2) strong').text().trim();
+                // Cột 3: Họ và Tên
+                const fullName = $row.find('td:nth-child(3)').text().trim();
+                // Cột 4: Ngày Sinh
+                const dob = $row.find('td:nth-child(4)').text().trim();
+                // Cột 5: Giới Tính
+                const gender = $row.find('td:nth-child(5)').text().trim();
+                // Cột 6: Email (Đã sửa để lấy từ ô thứ 6)
+                const email = $row.find('td:nth-child(6)').text().trim();
+                // Cột 7: Số Điện Thoại (Đã sửa để lấy từ ô thứ 7)
+                const phoneNumber = $row.find('td:nth-child(7)').text().trim();
+                // Cột 8: Trạng Thái
+                const status = $row.find('td:nth-child(8) .badge').text().trim();
+
+                wsData.push([stt++, studentCode, fullName, dob, gender, email, phoneNumber, status]);
+            });
+
+            // 3. Ghi file
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachSinhVien');
+            XLSX.writeFile(wb, 'DanhSachSinhVien.xlsx');
+        }
+
+
+        $(document).ready(function() {
+            var $rows = $('tbody tr');
+
+            // ===============================================
+            // 1. HÀM LỌC VÀ TÌM KIẾM TỔNG HỢP
+            // ===============================================
+            function applyFilters() {
+                var searchTerm = $('#searchStudent').val().toLowerCase().trim();
+                var filterStatus = $('#filterStatus').val().toLowerCase().trim(); // Lấy giá trị: "đang học", "bảo lưu", ...
+
+                $rows.each(function() {
+                    var $row = $(this);
+                    var isMatch = true;
+
+                    // Lấy các giá trị cần tìm kiếm
+                    var studentCode = $row.find('td:nth-child(2) strong').text().toLowerCase();
+                    var fullName = $row.find('td:nth-child(3)').text().toLowerCase();
+                    var email = $row.find('td:nth-child(6)').text().toLowerCase();
+
+                    // Lấy tên trạng thái đang hiển thị
+                    var statusNameInRow = $row.find('td:nth-child(8) .badge').text().toLowerCase().trim();
+
+                    // --- 1. Lọc theo Tìm kiếm chung (Mã SV, Tên, Email) ---
+                    var searchContent = studentCode + fullName + email;
+                    if (searchTerm && searchContent.indexOf(searchTerm) === -1) {
+                        isMatch = false;
+                    }
+
+                    // --- 2. Lọc theo Trạng thái (Status) ---
+                    // Chỉ lọc nếu người dùng chọn một giá trị cụ thể (filterStatus không rỗng)
+                    if (isMatch && filterStatus) {
+                        // So sánh tên trạng thái đang hiển thị với giá trị filter
+                        if (statusNameInRow !== filterStatus) {
+                            isMatch = false;
+                        }
+                    }
+
+                    $row.toggle(isMatch);
+                });
+            }
+
+            // ===============================================
+            // 2. GẮN SỰ KIỆN
+            // ===============================================
+
+            // Tìm kiếm chung
+            $('#searchStudent').on('keyup', applyFilters);
+            // Lọc theo Trạng thái
+            $('#filterStatus').on('change', applyFilters);
+
+
+                    
+            // Ví dụ: Logic tìm kiếm cơ bản (Nếu bạn chưa có hàm filter tổng hợp)
+
+            // $('#searchStudent').on('keyup', function() {
+            //     var value = $(this).val().toLowerCase();
+            //     $('tbody tr').filter(function() {
+            //         $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            //     });
+            // });
+
+
+            // Select all checkboxes
+            $('#selectAll').click(function() {
+                $('tbody tr:visible .row-checkbox').prop('checked', this.checked);
+            });
+
+            // Chạy hàm lọc lần đầu (để áp dụng trạng thái mặc định: Tất cả)
+            applyFilters();
+        });
+
+    </script>
+}

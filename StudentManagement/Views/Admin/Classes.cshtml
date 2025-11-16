@@ -10,10 +10,9 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassModal">
             <i class="fas fa-plus"></i> Tạo Lớp Mới
         </button>
-        @* Sửa nút Xuất Excel thành thẻ <a> trỏ đến Action ExportClassesToExcel *@
-        <a asp-action="ExportClassesToExcel" asp-controller="Admin" class="btn btn-success">
+        <button class="btn btn-success" onclick="exportClassesToExcel()">
             <i class="fas fa-file-excel"></i> Xuất Excel
-        </a>
+        </button>
         @* Sửa nút Xem Lịch thành thẻ <a> trỏ đến Action GeneralSchedule *@
         <a asp-action="GeneralSchedule" asp-controller="Admin" class="btn btn-info">
             <i class="fas fa-calendar-alt"></i> Xem Lịch Tổng Quan
@@ -265,11 +264,17 @@
 <div id="gridViewContent" class="row d-none">
     @foreach (var classItem in Model)
     {
+
+        var classId = classItem.ClassId;
+        var courseId = classItem.Course.CourseId; // Lấy ID Khóa học
+        var teacherId = classItem.Teacher?.TeacherId; // Lấy ID Giảng viên
         var enrollmentCount = classItem.Enrollments.Count;
         var maxStudents = classItem.MaxStudents ?? 0;
         var percentage = maxStudents > 0 ? (enrollmentCount * 100.0 / maxStudents) : 0;
 
-        <div class="col-lg-4 col-md-6 mb-4">
+        <div class="col-lg-4 col-md-6 mb-4"
+             data-course-id="@courseId"
+             data-teacher-id="@teacherId">
             <div class="class-card">
                 <div class="class-card-header">
                     <strong class="class-code">@classItem.ClassCode</strong>
@@ -289,6 +294,13 @@
                     <small class="text-secondary">@enrollmentCount / @maxStudents sinh viên</small>
                 </div>
                 <div class="class-card-footer text-end">
+                    <a asp-action="ClassStudents" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-success" title="Danh sách sinh viên">
+                        <i class="fas fa-users"></i>
+                    </a>
+                    <a asp-action="ClassSchedule" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-warning" title="Lịch học">
+                        <i class="fas fa-calendar-alt"></i>
+                    </a>
+
                     <a asp-action="ClassDetails" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-info">
                         <i class="fas fa-eye"></i> Chi tiết
                     </a>
@@ -378,6 +390,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .stat-mini-card {
             border-radius: 10px;
@@ -509,51 +522,86 @@
                 $('.row-checkbox').prop('checked', this.checked);
             });
 
+            // Lấy các elements ra ngoài ready function để dễ truy cập
+            var $rows = $('tbody tr');
+            // Lấy các thẻ (div.col-lg-4) trong Grid View
+            var $cards = $('#gridViewContent').find('.col-lg-4, .col-md-6');
+
+
             // Khai báo hàm lọc tổng hợp
             function filterClasses() {
-                // 1. Lấy giá trị tìm kiếm (Search)
                 var searchTerm = $('#searchClass').val().toLowerCase();
+                var courseId = $('#filterCourse').val();
+                var teacherId = $('#filterTeacher').val();
 
-                // 2. Lấy giá trị lọc theo Khóa học (Course Filter)
-                var courseId = $('#filterCourse').val(); // Lấy CourseId (dạng string)
-
-                // 3. Lấy giá trị lọc theo Giảng viên (Teacher Filter)
-                var teacherId = $('#filterTeacher').val(); // Lấy TeacherId (dạng string)
-
-                // Lặp qua từng dòng trong bảng
-                $('tbody tr').each(function() {
+                $rows.each(function() {
                     var $row = $(this);
                     var isMatch = true;
-
-                    // --- Lọc theo Tìm kiếm chung (Mã lớp, Tên lớp, v.v.) ---
                     var rowText = $row.text().toLowerCase();
+
+                    // Lọc tìm kiếm chung
                     if (searchTerm && rowText.indexOf(searchTerm) === -1) {
                         isMatch = false;
                     }
 
-                    // --- Lọc theo Khóa học (Course) ---
+                    // Lọc theo Khóa học (Course)
                     if (isMatch && courseId) {
-                        // Giả định bạn đã thêm thuộc tính data-course-id vào thẻ <tr>
                         var rowCourseId = $row.find('span.badge.bg-info').attr('data-course-id');
                         if (rowCourseId !== courseId) {
                             isMatch = false;
                         }
                     }
 
-                    // --- Lọc theo Giảng viên (Teacher) ---
+                    // Lọc theo Giảng viên (Teacher)
                     if (isMatch && teacherId) {
-                        // Giả định bạn đã thêm thuộc tính data-teacher-id vào thẻ <tr>
                         var rowTeacherId = $row.find('div.teacher-info').attr('data-teacher-id');
                         if (rowTeacherId !== teacherId) {
                             isMatch = false;
                         }
                     }
 
-                    // Hiển thị hoặc ẩn dòng
                     $row.toggle(isMatch);
+                });
+                $cards.each(function() {
+                        var $cardContainer = $(this); // div.col-lg-4
+                        var isCardMatch = true;
+                        var cardText = $cardContainer.text().toLowerCase();
 
+       
+                        var cardCourseId = $cardContainer.data('course-id').toString().trim();
+                        var cardTeacherId = $cardContainer.data('teacher-id') ? $cardContainer.data('teacher-id').toString().trim() : "";
 
+        
+                        var lowerSearchTerm = searchTerm ? searchTerm.toLowerCase() : null;
 
+       
+                        if (lowerSearchTerm && cardText.indexOf(lowerSearchTerm) === -1) {
+                            isCardMatch = false;
+                        }
+
+        
+                        if (isCardMatch && courseId) {
+            
+                            var filterCourseId = courseId.toString().trim();
+
+            
+                            if (cardCourseId !== filterCourseId) {
+                                isCardMatch = false;
+                            }
+                        }
+
+       
+                        if (isCardMatch && teacherId) {
+            
+                            var filterTeacherId = teacherId.toString().trim();
+
+            
+                            if (cardTeacherId !== filterTeacherId) {
+                                isCardMatch = false;
+                            }
+                        }
+
+                        $cardContainer.toggle(isCardMatch);
                 });
             }
             // Logic Chuyển đổi Chế độ xem
@@ -587,8 +635,38 @@
             $('#filterCourse').on('change', filterClasses);
             $('#filterTeacher').on('change', filterClasses);
 
-           
-
+            filterClasses();
         });
+        function exportClassesToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+
+            // Headers
+            wsData.push(['DANH SÁCH LỚP HỌC']);
+            wsData.push([]);
+            wsData.push(['STT', 'Mã Lớp', 'Tên Lớp', 'Khóa Học', 'Giảng Viên', 'Sĩ Số', 'Tình Trạng']);
+
+            let stt = 1;
+
+            // Lấy dữ liệu từ các hàng đang hiển thị trong <tbody>
+            // Sử dụng :visible để chỉ xuất các dòng đã được lọc (nếu có)
+            $('#tableViewContent tbody tr:visible').each(function() {
+                const $row = $(this);
+
+                // Trích xuất dữ liệu từ các cột theo thứ tự của bảng (1-9)
+                const classCode = $row.find('td:nth-child(2) strong').text();
+                const className = $row.find('td:nth-child(3) strong').text().trim();
+                const courseName = $row.find('td:nth-child(4) .badge').text().trim();
+                const teacherName = $row.find('td:nth-child(5) .teacher-info span').text().trim() || $row.find('td:nth-child(5) .text-muted').text().trim();
+                const capacity = $row.find('td:nth-child(7) .progress-bar').text().trim();
+                const status = $row.find('td:nth-child(8) .badge').text().trim();
+
+                wsData.push([stt++, classCode, className, courseName, teacherName, capacity, status]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'DanhSachLopHoc');
+            XLSX.writeFile(wb, 'DanhSachLopHoc.xlsx');
+        }
     </script>
 }
