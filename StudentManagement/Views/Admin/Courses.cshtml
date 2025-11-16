@@ -522,6 +522,229 @@
             $('#selectAll').click(function() {
                 $('.row-checkbox').prop('checked', this.checked);
             });
+
+
+            var $rows = $('tbody tr');
+            var $cards = $('#gridViewContent').find('.col-lg-4, .col-md-6');
+
+            // HÀM PHÂN TÍCH GIÁ TRỊ THỜI LƯỢNG SANG SỐ THÁNG (HOẶC GIỜ)
+            function getNumericDuration(durationText) {
+                // Ví dụ: trích xuất số từ chuỗi "3 tháng" hoặc "45 giờ"
+                var match = durationText.match(/(\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            }
+
+            // HÀM KIỂM TRA LỌC THEO THỜI LƯỢNG
+            function isDurationMatch(element, isGridView, filterValue) {
+                if (!filterValue) return true;
+
+                var durationText;
+
+                if (isGridView) {
+                    // Trong Grid View, Duration nằm trong .info-item đầu tiên
+                    durationText = element.find('.course-card-info .info-item:first-child span').text().toLowerCase();
+                } else {
+                    // Trong Table View, Duration nằm trong cột 5 (th:nth-child(5))
+                    durationText = element.find('td:nth-child(5) .badge').text().toLowerCase();
+                }
+
+                var numericValue = getNumericDuration(durationText);
+
+                // Logic so sánh dựa trên các nhóm lọc trong dropdown
+                if (filterValue === '1') { // 1-2 tháng
+                    return numericValue >= 1 && numericValue <= 2;
+                } else if (filterValue === '3') { // 3-4 tháng
+                    return numericValue >= 3 && numericValue <= 4;
+                } else if (filterValue === '5') { // 5+ tháng
+                    return numericValue >= 5;
+                }
+
+                return true;
+            }
+
+            // ===============================================
+            // 2. HÀM LỌC TỔNG HỢP (SEARCH & FILTER)
+            // ===============================================
+            function applyFilters() {
+                var searchTerm = $('#searchCourse').val().toLowerCase();
+                var filterDuration = $('#filterDuration').val();
+
+                // --- Lọc chế độ Bảng ---
+                $rows.each(function() {
+                    var $row = $(this);
+                    var rowText = $row.text().toLowerCase();
+                    var isMatch = true;
+
+                    // Lọc theo Tìm kiếm chung
+                    if (searchTerm && rowText.indexOf(searchTerm) === -1) {
+                        isMatch = false;
+                    }
+
+                    // Lọc theo Thời lượng
+                    if (isMatch && !isDurationMatch($row, false, filterDuration)) {
+                        isMatch = false;
+                    }
+
+                    $row.toggle(isMatch);
+                });
+
+                // --- Lọc chế độ Thẻ Lưới ---
+                $cards.each(function() {
+                     var $cardContainer = $(this);
+                     var cardText = $cardContainer.text().toLowerCase();
+                     var isCardMatch = true;
+
+                     // Lọc theo Tìm kiếm chung
+                     if (searchTerm && cardText.indexOf(searchTerm) === -1) {
+                         isCardMatch = false;
+                     }
+
+                     // Lọc theo Thời lượng
+                     if (isCardMatch && !isDurationMatch($cardContainer, true, filterDuration)) {
+                         isCardMatch = false;
+                     }
+
+                     $cardContainer.toggle(isCardMatch);
+                });
+
+                // Sau khi lọc, áp dụng sắp xếp
+                applySorting();
+            }
+
+            // Gắn sự kiện cho các điều khiển lọc
+            $('#searchCourse').on('keyup', applyFilters);
+            $('#filterDuration').on('change', applyFilters);
+            $('#sortBy').on('change', applyFilters); // Chạy lọc để sắp xếp
+
+            // ===============================================
+            // 2. CHỨC NĂNG SẮP XẾP (SORTING)
+            // ===============================================
+            function applySorting() {
+                var sortBy = $('#sortBy').val();
+
+                // Xác định chế độ xem hiện tại
+                var isGridView = $('#gridViewContent').is(':visible');
+
+                // Lấy danh sách các phần tử đang hiển thị để sắp xếp
+                var $sortableElements = isGridView
+                                        ? $('#gridViewContent .col-lg-4:visible').get()
+                                        : $('tbody tr:visible').get();
+
+                $sortableElements.sort(function(a, b) {
+                    var valA, valB;
+                    var $elemA = $(a);
+                    var $elemB = $(b);
+
+                    // Hàm lấy giá trị chung cho cả hai chế độ xem
+                    function getSortValue(elem, type) {
+                        if (isGridView) {
+                            // Cần đảm bảo các thẻ trong Grid View có data-fee và data-students
+                            if (type === 'fee') {
+                                // Nếu sử dụng data attribute trong Grid View:
+                                // return parseFloat(elem.find('.info-item:contains("VNĐ") span').text().replace(/ VNĐ/g, '').replace(/,/g, '').replace(/\./g, ''));
+                                // Giả định chúng ta sẽ đọc trực tiếp từ HTML đã render
+                                return parseFloat(elem.find('.info-item:contains("VNĐ") span').text().replace(/ VNĐ/g, '').replace(/,/g, '').replace(/\./g, ''));
+                            }
+                            if (type === 'students') {
+                                // Lấy số học viên từ footer stats (số thứ hai)
+                                var text = elem.find('.footer-stats span:nth-child(2)').text();
+                                var match = text.match(/(\d+)/);
+                                return match ? parseInt(match[1]) : 0;
+                            }
+                            // Tên khóa học
+                            return elem.find('.course-card-title').text().toUpperCase();
+
+                        } else {
+                            // Chế độ Bảng (Table View)
+                            if (type === 'fee') {
+                                return parseFloat(elem.find('td:nth-child(6) strong').text().replace(/ VNĐ/g, '').replace(/,/g, '').replace(/\./g, ''));
+                            }
+                            if (type === 'students') {
+                                var stats = elem.find('td:nth-child(7) .badge.bg-warning').text().match(/(\d+)/);
+                                return stats ? parseInt(stats[1]) : 0;
+                            }
+                            // Tên khóa học
+                            return elem.find('td:nth-child(3) strong').text().toUpperCase();
+                        }
+                    }
+
+                    // Áp dụng so sánh dựa trên loại sắp xếp
+                    switch (sortBy) {
+                        case 'name':
+                            valA = getSortValue($elemA, 'name');
+                            valB = getSortValue($elemB, 'name');
+                            return (valA < valB) ? -1 : (valA > valB) ? 1 : 0;
+
+                        case 'fee_asc':
+                            valA = getSortValue($elemA, 'fee');
+                            valB = getSortValue($elemB, 'fee');
+                            return valA - valB;
+
+                        case 'fee_desc':
+                            valA = getSortValue($elemA, 'fee');
+                            valB = getSortValue($elemB, 'fee');
+                            return valB - valA;
+
+                        case 'popular':
+                            valA = getSortValue($elemA, 'students');
+                            valB = getSortValue($elemB, 'students');
+                            return valB - valA; // Phổ biến nhất (Giảm dần)
+
+                        default:
+                            return 0;
+                    }
+
+
+                });
+
+                // Chèn các hàng đã sắp xếp trở lại bảng
+                // $.each($visibleRows, function(index, row) {
+                //     $('tbody').append(row);
+                // });
+
+                if (isGridView) {
+                    $.each($sortableElements, function(index, card) {
+                        $('#gridViewContent').append(card);
+                    });
+                } 
+                else {
+                    $.each($sortableElements, function(index, row) {
+                        $('tbody').append(row);
+                    });
+                }
+            }
+
+            // Gắn sự kiện cho Sắp xếp
+            $('#sortBy').on('change', applyFilters); // Áp dụng sắp xếp sau khi lọc
+
+            // ===============================================
+            // 3. CHỨC NĂNG CHUYỂN ĐỔI CHẾ ĐỘ XEM
+            // ===============================================
+            $('#tableView').click(function() {
+                $('#tableViewContent').removeClass('d-none');
+                $('#gridViewContent').addClass('d-none');
+                $(this).addClass('active');
+                $('#gridView').removeClass('active');
+            });
+
+            $('#gridView').click(function() {
+                $('#gridViewContent').removeClass('d-none');
+                $('#tableViewContent').addClass('d-none');
+                $(this).addClass('active');
+                $('#tableView').removeClass('active');
+            });
+
+            // Khởi tạo (Chạy bộ lọc khi tải trang để sắp xếp mặc định)
+            applyFilters();
+
+            // Select all checkboxes (giữ nguyên logic cũ)
+            $('#selectAll').click(function() {
+                $('.row-checkbox').prop('checked', this.checked);
+            });
+
+
         });
+
+
     </script>
 }

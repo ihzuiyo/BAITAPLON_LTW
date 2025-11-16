@@ -10,9 +10,10 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassModal">
             <i class="fas fa-plus"></i> Tạo Lớp Mới
         </button>
-        <button class="btn btn-success">
+        @* Sửa nút Xuất Excel thành thẻ <a> trỏ đến Action ExportClassesToExcel *@
+        <a asp-action="ExportClassesToExcel" asp-controller="Admin" class="btn btn-success">
             <i class="fas fa-file-excel"></i> Xuất Excel
-        </button>
+        </a>
         @* Sửa nút Xem Lịch thành thẻ <a> trỏ đến Action GeneralSchedule *@
         <a asp-action="GeneralSchedule" asp-controller="Admin" class="btn btn-info">
             <i class="fas fa-calendar-alt"></i> Xem Lịch Tổng Quan
@@ -149,19 +150,24 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-info">@classItem.Course.CourseName</span>
+                                @* THÊM data-course-id VÀO THẺ SPAN để JS lọc *@
+                                <span class="badge bg-info" data-course-id="@classItem.Course.CourseId">@classItem.Course.CourseName</span>
                             </td>
                             <td>
                                 @if (classItem.Teacher != null)
                                 {
-                                    <div class="teacher-info">
+                                    @* THÊM data-teacher-id VÀO THẺ DIV để JS lọc *@
+                                    <div class="teacher-info" data-teacher-id="@classItem.Teacher.TeacherId">
                                         <i class="fas fa-chalkboard-teacher text-primary"></i>
                                         <span>@classItem.Teacher.FirstName @classItem.Teacher.LastName</span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <span class="text-muted"><i class="fas fa-user-times"></i> Chưa phân công</span>
+                                    @* Nếu chưa phân công, vẫn cần một thẻ div để JS tìm kiếm *@
+                                    <div class="teacher-info" data-teacher-id="">
+                                        <span class="text-muted"><i class="fas fa-user-times"></i> Chưa phân công</span>
+                                    </div>
                                 }
                             </td>
                             <td>
@@ -256,6 +262,46 @@
         </div>
     </div>
 </div>
+<div id="gridViewContent" class="row d-none">
+    @foreach (var classItem in Model)
+    {
+        var enrollmentCount = classItem.Enrollments.Count;
+        var maxStudents = classItem.MaxStudents ?? 0;
+        var percentage = maxStudents > 0 ? (enrollmentCount * 100.0 / maxStudents) : 0;
+
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="class-card">
+                <div class="class-card-header">
+                    <strong class="class-code">@classItem.ClassCode</strong>
+                    <span class="badge bg-warning float-end">@percentage.ToString("F0")% Đầy</span>
+                </div>
+                <div class="class-card-body">
+                    <h5 class="card-title">@classItem.ClassName</h5>
+                    <p class="card-text text-muted small">
+                        <i class="fas fa-book"></i> Khóa học: @classItem.Course.CourseName
+                    </p>
+                    <p class="card-text">
+                        <i class="fas fa-chalkboard-teacher"></i> GV: @(classItem.Teacher?.FirstName + " " + classItem.Teacher?.LastName ?? "Chưa phân công")
+                    </p>
+                    <div class="progress mb-2" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-secondary">@enrollmentCount / @maxStudents sinh viên</small>
+                </div>
+                <div class="class-card-footer text-end">
+                    <a asp-action="ClassDetails" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-info">
+                        <i class="fas fa-eye"></i> Chi tiết
+                    </a>
+                    <a asp-action="EditClass" asp-route-id="@classItem.ClassId" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i> Sửa
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
 
 <!-- Modal: Add New Class -->
 <div class="modal fade" id="addClassModal" tabindex="-1" aria-labelledby="addClassModalLabel" aria-hidden="true">
@@ -407,6 +453,45 @@
             color: #6c757d;
             font-size: 14px;
         }
+        /* Styles cho Card View */
+        .class-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            
+            
+        }
+
+        .class-card-header {
+            /* ÁP DỤNG GRADIENT MÀU THEO YÊU CẦU */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff; /* Đảm bảo chữ trắng dễ đọc */
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .class-card:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                transform: translateY(-2px);
+            }
+
+        .class-card-body {
+            padding: 15px;
+            flex-grow: 1;
+        }
+
+        .class-card-footer {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
     </style>
     
     <script>
@@ -423,6 +508,87 @@
             $('#selectAll').click(function() {
                 $('.row-checkbox').prop('checked', this.checked);
             });
+
+            // Khai báo hàm lọc tổng hợp
+            function filterClasses() {
+                // 1. Lấy giá trị tìm kiếm (Search)
+                var searchTerm = $('#searchClass').val().toLowerCase();
+
+                // 2. Lấy giá trị lọc theo Khóa học (Course Filter)
+                var courseId = $('#filterCourse').val(); // Lấy CourseId (dạng string)
+
+                // 3. Lấy giá trị lọc theo Giảng viên (Teacher Filter)
+                var teacherId = $('#filterTeacher').val(); // Lấy TeacherId (dạng string)
+
+                // Lặp qua từng dòng trong bảng
+                $('tbody tr').each(function() {
+                    var $row = $(this);
+                    var isMatch = true;
+
+                    // --- Lọc theo Tìm kiếm chung (Mã lớp, Tên lớp, v.v.) ---
+                    var rowText = $row.text().toLowerCase();
+                    if (searchTerm && rowText.indexOf(searchTerm) === -1) {
+                        isMatch = false;
+                    }
+
+                    // --- Lọc theo Khóa học (Course) ---
+                    if (isMatch && courseId) {
+                        // Giả định bạn đã thêm thuộc tính data-course-id vào thẻ <tr>
+                        var rowCourseId = $row.find('span.badge.bg-info').attr('data-course-id');
+                        if (rowCourseId !== courseId) {
+                            isMatch = false;
+                        }
+                    }
+
+                    // --- Lọc theo Giảng viên (Teacher) ---
+                    if (isMatch && teacherId) {
+                        // Giả định bạn đã thêm thuộc tính data-teacher-id vào thẻ <tr>
+                        var rowTeacherId = $row.find('div.teacher-info').attr('data-teacher-id');
+                        if (rowTeacherId !== teacherId) {
+                            isMatch = false;
+                        }
+                    }
+
+                    // Hiển thị hoặc ẩn dòng
+                    $row.toggle(isMatch);
+
+
+
+                });
+            }
+            // Logic Chuyển đổi Chế độ xem
+            $('#toggleViewMode').click(function() {
+                var isTableView = $('#tableViewContent').is(':visible');
+
+                if (isTableView) {
+                    // Chuyển sang Grid View
+                    $('#tableViewContent').hide();
+                    $('.table-responsive').hide(); // Ẩn cả container responsive
+                    $('#gridViewContent').removeClass('d-none').show();
+
+                    $(this).html('<i class="fas fa-list"></i> Chế Độ Xem'); // Đổi icon/text
+                } else {
+                    // Chuyển về Table View
+                    $('#gridViewContent').hide();
+                    $('#tableViewContent').show();
+                    $('.table-responsive').show();
+
+                    $(this).html('<i class="fas fa-th"></i> Chế Độ Xem'); // Đổi icon/text
+                }
+            });
+
+            // Khởi tạo tên ID cho container Table View hiện tại
+            // Gán ID cho div chứa bảng:
+            $('.table-responsive').attr('id', 'tableViewContent');
+
+
+            // Gắn sự kiện cho các điều khiển lọc
+            $('#searchClass').on('keyup', filterClasses);
+            $('#filterCourse').on('change', filterClasses);
+            $('#filterTeacher').on('change', filterClasses);
+
+           
+
         });
     </script>
 }
