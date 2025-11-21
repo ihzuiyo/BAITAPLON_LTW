@@ -1,0 +1,94 @@
+﻿@model StudentManagement.Models.ViewModels.ReportDataViewModel 
+@{
+    Layout = null; // RẤT QUAN TRỌNG: Không sử dụng Layout chính
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Báo Cáo Tổng Hợp</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 10pt;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 18pt;
+            margin: 5px 0;
+        }
+
+        .summary-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BÁO CÁO TỔNG HỢP HỆ THỐNG</h1>
+        <p>Ngày xuất: @Model.DateGenerated</p>
+    </div>
+
+    <div class="summary-box">
+        <h3>Tóm Tắt Chung</h3>
+        <p>Tổng Số Sinh Viên: <strong>@Model.TotalStudents</strong></p>
+        <p>Tổng Doanh Thu Đã Thu: <strong>@Model.TotalRevenue</strong></p>
+    </div>
+
+    <h2>Chi Tiết Học Phí</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Mã SV</th>
+                <th>Tên Sinh Viên</th>
+                <th>Lớp Học</th>
+                <th>Tổng Học Phí</th>
+                <th>Đã Đóng</th>
+                <th>Còn Lại</th>
+                <th>Hạn Đóng</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tuition in Model.TuitionDetails)
+            {
+                var remaining = tuition.TotalFee - tuition.AmountPaid;
+                <tr>
+                    <td>@tuition.TuitionId</td>
+                    <td>@tuition.Enrollment.Student.StudentCode</td>
+                    <td>@tuition.Enrollment.Student.FullName</td>
+                    <td>@tuition.Enrollment.Class.ClassName</td>
+                    <td>@tuition.TotalFee.ToString("N0")</td>
+                    <td>@tuition.AmountPaid.ToString("N0")</td>
+                    <td>@remaining.ToString("N0")</td>
+                    <td>@(tuition.DueDate?.ToString("dd/MM/yyyy"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>
