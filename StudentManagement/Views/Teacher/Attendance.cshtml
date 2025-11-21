@@ -548,6 +548,16 @@
         $(document).ready(function() {
             // Initialize attendance counts
             updateAttendanceCounts();
+
+             $('.attendance-radio').on('click', function(e) {
+            // Kiểm tra xem nút có bị disable không
+            if ($(this).prop('disabled')) {
+                e.preventDefault();
+                showToast('Lỗi thao tác', 'Học viên này không đủ điều kiện điểm danh.', 'error');
+                return;
+            }
+            $(this).trigger('change');
+        });
             
             // Update counts when individual attendance changes
             $('.attendance-radio').on('change', function() {
@@ -715,9 +725,12 @@
             
             // Helper function to update attendance counts
             function updateAttendanceCounts() {
-                const present = $('input[value="Present"]:checked').length;
-                const absent = $('input[value="Absent"]:checked').length;
-                const late = $('input[value="Late"]:checked').length;
+                const present = $('input[value="Present"]:checked:not(:disabled)').length;
+                const absent = $('input[value="Absent"]:checked:not(:disabled)').length;
+                const late = $('input[value="Late"]:checked:not(:disabled)').length;
+                // const present = $('input[value="Present"]:checked').length;
+                // const absent = $('input[value="Absent"]:checked').length;
+                // const late = $('input[value="Late"]:checked').length;
                 const total = @totalStudents;
                 const marked = present + absent + late;
                 const unmarked = total - marked;

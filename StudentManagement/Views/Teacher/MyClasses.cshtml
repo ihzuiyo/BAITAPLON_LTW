@@ -10,23 +10,23 @@
         <p class="page-subtitle">Quản lý tất cả các lớp học bạn đang phụ trách</p>
     </div>
     <div class="header-actions">
-        <button class="btn btn-success">
+        <button class="btn btn-success" id="exportExcelBtn">
             <i class="fas fa-file-excel"></i> Xuất Danh Sách
         </button>
-        <button class="btn btn-primary">
-            <i class="fas fa-print"></i> In Lịch Dạy
-        </button>
+        <a asp-action="PrintMyClasses" class="btn btn-primary" target="_blank">
+            <i class="fas fa-print"></i> In Danh Sách Lớp
+        </a>
     </div>
 </div>
 
 <!-- Filter and Search -->
-<div class="card mb-4">
+<div class="card mb-4 shadow-sm">
     <div class="card-body">
-        <div class="row">
+        <div class="row g-3 align-items-center">
             <div class="col-md-6">
                 <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="searchClass" placeholder="Tìm kiếm lớp học...">
+                    <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchClass" placeholder="Tìm kiếm lớp học, mã lớp, khóa học...">
                 </div>
             </div>
             <div class="col-md-3">
@@ -41,7 +41,7 @@
             <div class="col-md-3">
                 <select class="form-select" id="sortBy">
                     <option value="name">Tên lớp A-Z</option>
-                    <option value="students">Số học viên</option>
+                    <option value="students">Số học viên (Giảm dần)</option>
                     <option value="schedule">Lịch học</option>
                 </select>
             </div>
@@ -59,7 +59,7 @@
             var maxStudents = classItem.MaxStudents ?? 0;
             var percentage = maxStudents > 0 ? (studentCount * 100 / maxStudents) : 0;
             var progressClass = percentage >= 90 ? "bg-danger" : percentage >= 70 ? "bg-warning" : "bg-success";
-            
+
             <div class="col-lg-6 mb-4">
                 <div class="card h-100">
                     <div class="card-header bg-primary text-white">
@@ -150,14 +150,84 @@ else
 
 @section Scripts {
     <script>
+        // $(document).ready(function() {
+            
+        //     $('#searchClass').on('keyup', function() {
+        //         var value = $(this).val().toLowerCase();
+        //         $('.col-lg-6').filter(function() {
+        //             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        //         });
+        //     });
+        //     $('#exportExcelBtn').on('click', function(e) {
+        //         if (confirm('Bạn có chắc chắn muốn xuất dữ liệu lớp học ra file Excel không?')) {
+                   
+        //             window.location.href = '@Url.Action("ExportClassesToExcel", "Teacher")';
+        //         }
+        //     });
+        // });
         $(document).ready(function() {
-            // Search functionality
-            $('#searchClass').on('keyup', function() {
-                var value = $(this).val().toLowerCase();
-                $('.col-lg-6').filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+
+            // Lắng nghe sự kiện thay đổi từ 3 trường điều khiển
+            $('#searchClass, #filterCourse, #sortBy').on('keyup change', filterAndSortClasses);
+
+            function filterAndSortClasses() {
+                var searchText = $('#searchClass').val().toLowerCase();
+                var selectedCourseId = $('#filterCourse').val();
+                var sortBy = $('#sortBy').val();
+                var $container = $('#classes-container');
+                var $allCards = $container.find('.class-card');
+
+                // 1. LỌC (FILTER)
+                var $classCards = $allCards.filter(function() {
+                    var $card = $(this);
+                    $card.show();
+                    var cardText = $card.text().toLowerCase();
+                    var courseId = $card.data('course-id').toString();
+
+                    var searchMatch = cardText.indexOf(searchText) > -1; // Tìm kiếm theo từ khóa
+                    var courseMatch = !selectedCourseId || courseId === selectedCourseId; // Lọc theo khóa học
+
+                    return searchMatch && courseMatch; // Trả về các thẻ thỏa mãn cả hai điều kiện
                 });
-            });
+
+                // 2. SẮP XẾP (SORT)
+                $classCards.sort(function(a, b) {
+                    var aVal, bVal;
+
+                    if (sortBy === 'name') {
+                        // Sắp xếp theo Tên lớp học (A-Z)
+                        aVal = $(a).find('.card-header h5').text().trim();
+                        bVal = $(b).find('.card-header h5').text().trim();
+                        return aVal.localeCompare(bVal);
+
+                    } else if (sortBy === 'students') {
+                        // Sắp xếp theo Số học viên (Giảm dần)
+                        // Lấy số lượng học viên từ thẻ span
+                        aVal = parseInt($(a).find('.col-md-6:first .fw-bold').text().split('/')[0].trim());
+                        bVal = parseInt($(b).find('.col-md-6:first .fw-bold').text().split('/')[0].trim());
+                        return bVal - aVal; // Giảm dần
+
+                    } else if (sortBy === 'schedule') {
+                        // Sắp xếp theo Lịch học (theo chữ cái đầu tiên của ngày)
+                        aVal = $(a).find('.badge.bg-info:first').text().trim();
+                        bVal = $(b).find('.badge.bg-info:first').text().trim();
+                        return aVal.localeCompare(bVal);
+                    }
+                    return 0;
+                });
+
+                // 3. HIỂN THỊ KẾT QUẢ
+                $container.empty();
+
+                if ($classCards.length > 0) {
+                    $container.append($classCards);
+                    $classCards.show();
+                }
+            }
+
+            // Gọi hàm lần đầu tiên để áp dụng sắp xếp mặc định
+            filterAndSortClasses();
         });
+        
     </script>
 }
