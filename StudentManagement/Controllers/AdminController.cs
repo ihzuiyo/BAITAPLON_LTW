@@ -40,24 +40,34 @@ namespace StudentManagement.Controllers
         // Students Management
         public async Task<IActionResult> Students()
         {
-            // Lấy danh sách Student Status cho Modal và Filter
-            ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+            ViewBag.StudentStatuses = await GetStudentStatusesForView();
+            var students = await GetStudentsForView();
 
-            // Lấy danh sách Sinh viên, đảm bảo Include đầy đủ các thông tin quan trọng
-            var students = await _context.Students
-                .Include(s => s.User)
-                .Include(s => s.Status)
-                .ToListAsync();
- 
 
             return View(students);
         }
-       
+        // Đặt trong Controller
+        private async Task<List<Student>> GetStudentsForView()
+        {
+            // Đảm bảo dữ liệu không bao giờ NULL, và có đủ includes
+            return await _context.Students
+                .Include(s => s.User)
+                .Include(s => s.Status)
+                .ToListAsync() ?? new List<Student>();
+        }
+
+        private async Task<List<StudentStatus>> GetStudentStatusesForView()
+        {
+            return await _context.StudentStatuses.ToListAsync() ?? new List<StudentStatus>();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateStudent(string StudentCode, string Username, string Password, string ConfirmPassword, string FullName, DateTime? DateOfBirth, string Gender,
-        string Email, string PhoneNumber, string Address, int StatusId)
+        public async Task<IActionResult> CreateStudent(string StudentCode, string Username, string Password, string ConfirmPassword, string FullName,
+                                             DateOnly? DateOfBirth, string Gender, string Email, string PhoneNumber,
+                                             string Address, int StatusId)
         {
+            var studentFullName = FullName;
             // 1. KIỂM TRA VALIDATION CƠ BẢN
             if (Password != ConfirmPassword)
             {
@@ -94,7 +104,7 @@ namespace StudentManagement.Controllers
                     RoleId = studentRoleId,
                     Username = Username,
                     PasswordHash = Password, // Lưu trữ Tạm thời (nên dùng thư viện Hashing thực tế!)
-                    FullName = FullName,
+                    FullName = studentFullName,
                     Email = Email,
                     PhoneNumber = PhoneNumber,
                     Status = "Active",
@@ -110,8 +120,8 @@ namespace StudentManagement.Controllers
                     UserId = newUser.UserId, // Gán UserId vừa tạo
                     StatusId = StatusId,
                     StudentCode = StudentCode,
-                    FullName = FullName,
-                    DateOfBirth = DateOfBirth.HasValue ? DateOnly.FromDateTime(DateOfBirth.Value) : (DateOnly?)null,
+                    FullName = studentFullName,
+                    DateOfBirth = DateOfBirth,
                     Gender = Gender,
                     Address = Address,
                     PhoneNumber = PhoneNumber,
@@ -165,7 +175,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Tải Student và User liên quan
+            // Tải Student và BẮT BUỘC Include User (cho Email/Phone)
             var student = await _context.Students
                 .Include(s => s.User)
                 .FirstOrDefaultAsync(m => m.StudentId == id);
@@ -178,9 +188,6 @@ namespace StudentManagement.Controllers
             // Chuẩn bị dữ liệu cho Dropdown Trạng thái
             ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
 
-            // Gán Student.User.Email và Student.User.PhoneNumber cho các trường trong form
-            // Vì View StudentDetails/Edit sẽ cần các trường này để hiển thị/chỉnh sửa
-
             return View(student);
         }
 
@@ -188,38 +195,43 @@ namespace StudentManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditStudent(int id,
-            [Bind("StudentId, StudentCode, FullName, DateOfBirth, Gender, Address, StatusId, UserId, Email, PhoneNumber")] Student studentInput)
+            [Bind("StudentId, StudentCode, FullName, DateOfBirth, Gender, Address, StatusId, UserId")] Student studentInput,
+            string Email, // Nhận Email độc lập từ form
+            string PhoneNumber) // Nhận Phone độc lập từ form
         {
-            // Kiểm tra ID
+            // 1. Kiểm tra ID
             if (id != studentInput.StudentId)
             {
                 return NotFound();
             }
 
+            // 2. Kiểm tra ModelState (Validation)
             if (ModelState.IsValid)
             {
-                // 1. Tải Entity gốc từ DB
+                // Tải Entity gốc (BẮT BUỘC INCLUDE USER)
                 var studentToUpdate = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
 
-                if (studentToUpdate == null)
-                {
-                    return NotFound();
-                }
+                if (studentToUpdate == null) return NotFound();
 
                 try
                 {
-                    // 2. Cập nhật thuộc tính Student
+                    // 3. Cập nhật thủ công các thuộc tính Student
                     studentToUpdate.StudentCode = studentInput.StudentCode;
                     studentToUpdate.FullName = studentInput.FullName;
-                    // ... (Cập nhật các trường Student khác) ...
+                    studentToUpdate.DateOfBirth = studentInput.DateOfBirth;
+                    studentToUpdate.Gender = studentInput.Gender;
+                    studentToUpdate.Address = studentInput.Address;
                     studentToUpdate.StatusId = studentInput.StatusId;
 
-                    // 3. Cập nhật thuộc tính User (Bắt buộc vì Email/Phone nằm trong Users)
+                    // 4. Cập nhật thuộc tính User (Email/Phone/FullName)
                     if (studentToUpdate.User != null)
                     {
-                        studentToUpdate.User.Email = studentInput.Email;
-                        studentToUpdate.User.PhoneNumber = studentInput.PhoneNumber;
-                        // Nếu Username/Password thay đổi, xử lý logic riêng ở đây.
+                        studentToUpdate.User.Email = Email;
+                        studentToUpdate.User.PhoneNumber = PhoneNumber;
+                        studentToUpdate.User.FullName = studentInput.FullName;
+
+                        // GẮN CỜ THỦ CÔNG: Báo cho EF Core biết đối tượng User đã được thay đổi
+                        _context.Entry(studentToUpdate.User).State = EntityState.Modified;
                     }
 
                     await _context.SaveChangesAsync();
@@ -231,7 +243,9 @@ namespace StudentManagement.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    // ... (Xử lý lỗi concurrency)
+                    // Xử lý lỗi Concurrency
+                    if (!_context.Classes.Any(e => e.ClassId == studentInput.StudentId)) return NotFound();
+                    else throw;
                 }
                 catch (Exception ex)
                 {
@@ -239,8 +253,9 @@ namespace StudentManagement.Controllers
                 }
             }
 
-            // Nếu có lỗi, tải lại trạng thái và hiển thị lại form
+            // 5. Nếu Model KHÔNG hợp lệ, tải lại ViewBag và trả về View
             ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+            // Trả về studentInput để giữ lại các giá trị người dùng vừa nhập
             return View(studentInput);
         }
 
@@ -702,53 +717,121 @@ namespace StudentManagement.Controllers
             return View(users);
         }
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateUser(CreateUserViewModel model)
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
+{
+    // Giả định: 
+    // Student RoleId = 3 
+    // Teacher RoleId = 2
+
+    // 1. KIỂM TRA VALIDATION CHUNG (Mật khẩu, Trùng lặp User)
+    if (model.Password != model.ConfirmPassword)
+    {
+        ModelState.AddModelError("ConfirmPassword", "Mật khẩu và Xác nhận Mật khẩu không khớp.");
+    }
+    if (await _context.Users.AnyAsync(u => u.Username == model.Username || u.Email == model.Email))
+    {
+        ModelState.AddModelError("Username", "Username hoặc Email đã tồn tại.");
+    }
+    
+    // Cần kiểm tra Model State VÀ logic nghiệp vụ khác
+    if (ModelState.IsValid)
+    {
+        // 2. TẠO USER (Luôn thực hiện)
+        try
         {
-            // Giả sử bạn có một dịch vụ/hàm để Hash mật khẩu, ví dụ: HashPassword(model.Password)
-            // (Trong môi trường thực tế, bạn sẽ dùng ASP.NET Identity hoặc thư viện như BCrypt)
-
-            // Kiểm tra cơ bản
-            if (model.Password != model.ConfirmPassword)
+            var newUser = new User
             {
-                TempData["ErrorMessage"] = "Mật khẩu và Xác nhận mật khẩu không khớp.";
-                return RedirectToAction(nameof(Users));
-            }
+                RoleId = model.RoleId,
+                Username = model.Username,
+                PasswordHash = model.Password, // Cần HASH MẬT KHẨU
+                FullName = model.FullName,
+                Email = model.Email,
+                PhoneNumber = model.PhoneNumber,
+                Status = "Active",
+                DateCreated = DateTime.Now
+            };
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync(); // LƯU VÀ LẤY newUser.UserId
 
+            // 3. RẼ NHÁNH TẠO HỒ SƠ CHI TIẾT
+            if (model.RoleId == 3) // VAI TRÒ LÀ STUDENT
+            {
+                // Kiểm tra logic bắt buộc cho Student
+                if (string.IsNullOrEmpty(model.StudentCode) || model.StatusId <= 0)
+                {
+                    // Xóa User vừa tạo (HOẶC Xử lý Transaction)
+                    _context.Users.Remove(newUser);
+                    await _context.SaveChangesAsync();
+                    ModelState.AddModelError("StudentCode", "Mã SV và Trạng thái là bắt buộc cho vai trò Sinh viên.");
+                }
+                else
+                {
+                    var newStudent = new Student
+                    {
+                        UserId = newUser.UserId,
+                        StatusId = model.StatusId,
+                        StudentCode = model.StudentCode,
+                        FullName = model.FullName,
+                        Email = model.Email,
+                        PhoneNumber = model.PhoneNumber,
+                        // ... (Các trường khác như DateOfBirth, Gender, Address)
+                    };
+                    _context.Students.Add(newStudent);
+                }
+            }
+            else if (model.RoleId == 2) // VAI TRÒ LÀ TEACHER
+            {
+                if (string.IsNullOrEmpty(model.TeacherCode))
+                {
+                    // Xóa User vừa tạo
+                    _context.Users.Remove(newUser);
+                    await _context.SaveChangesAsync();
+                    ModelState.AddModelError("TeacherCode", "Mã GV là bắt buộc cho vai trò Giảng viên.");
+                }
+                else
+                {
+                    // Giả định bạn có cách tách FirstName/LastName từ FullName
+                    var newTeacher = new Teacher
+                    {
+                        UserId = newUser.UserId,
+                        TeacherCode = model.TeacherCode,
+                        FirstName = model.FullName, // Cần Logic tách tên họ
+                        LastName = "", 
+                        Specialization = model.Specialization,
+                        Email = model.Email,
+                        PhoneNumber = model.PhoneNumber,
+                        // ...
+                    };
+                    _context.Teachers.Add(newTeacher);
+                }
+            }
+            
+            // 4. LƯU CÁC THAY ĐỔI CỦA STUDENT/TEACHER (Chỉ nếu không có lỗi nghiệp vụ)
             if (ModelState.IsValid)
             {
-                var newUser = new User
-                {
-                    RoleId = model.RoleId,
-                    Username = model.Username,
-                    // PasswordHash = HashPassword(model.Password), // Cần hash mật khẩu
-                    PasswordHash = model.Password, // Tạm thời lưu thô để demo (CẦN SỬA ĐỂ BẢO MẬT)
-                    FullName = model.FullName,
-                    Email = model.Email,
-                    PhoneNumber = model.PhoneNumber,
-                    Status = model.Status,
-                    DateCreated = DateTime.Now
-                };
-
-                try
-                {
-                    _context.Add(newUser);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Đã tạo người dùng **{model.Username}** thành công.";
-                }
-                catch (DbUpdateException)
-                {
-                    // Xử lý lỗi trùng Username/Email (UNIQUE Constraint)
-                    TempData["ErrorMessage"] = "Lỗi: Username hoặc Email đã tồn tại trong hệ thống.";
-                }
+                await _context.SaveChangesAsync(); 
+                TempData["SuccessMessage"] = $"Đã tạo người dùng '{model.Username}' thành công!";
+                return RedirectToAction("Users"); 
             }
-            else
-            {
-                TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại.";
-            }
-
-            return RedirectToAction(nameof(Users));
         }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"Lỗi hệ thống: {ex.Message}");
+        }
+    }
+
+    // Nếu có lỗi, tải lại dữ liệu cho form và trả về View
+    // Bạn cần tải lại danh sách Roles, Statuses và Users cho View Users
+    ViewBag.Roles = await _context.Roles.ToListAsync();
+    ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+    var usersList = await _context.Users.Include(u => u.Role).ToListAsync();
+
+    // Tải lại dữ liệu form đã nhập (nếu View hỗ trợ Model Binding cho ViewModel)
+    ViewBag.InputModel = model; 
+    
+    return View("Users", usersList);
+}
 
         //[HttpPost]
         //[ValidateAntiForgeryToken]

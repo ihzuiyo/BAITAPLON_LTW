@@ -84,13 +84,13 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" title="Xem chi tiết">
+                                    <a asp-action="StudentDetails" asp-route-id="@student.StudentId" class="btn btn-sm btn-info" title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                    </a>
+                                    <a asp-action="EditStudent" asp-route-id="@student.StudentId" class="btn btn-sm btn-primary" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Xóa">
+                                    </a>
+                                    <button class="btn btn-sm btn-danger btn-delete-student" title="Xóa" data-id="@student.StudentId">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -336,6 +336,43 @@
 
             // Chạy hàm lọc lần đầu (để áp dụng trạng thái mặc định: Tất cả)
             applyFilters();
+
+
+
+         const studentBaseUrl = '/Admin'; // Hoặc '/Student' nếu bạn đã tách Controller
+
+        // Xử lý nút Xóa (AJAX)
+            $(document).on('click', '.btn-delete-student', function() {
+                var studentId = $(this).data('id');
+                var $row = $(this).closest('tr');
+                var studentName = $row.find('td:nth-child(3)').text().trim(); // Lấy tên sinh viên từ cột Tên
+
+                if (confirm(`Bạn có chắc chắn muốn xóa sinh viên ${studentName} không?`)) {
+                    $.ajax({
+                        url: studentBaseUrl + '/DeleteStudent/' + studentId,
+                        type: 'POST',
+                        data: {
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() // Gửi Token chống CSRF
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Xóa hàng khỏi bảng với hiệu ứng mờ dần
+                                $row.fadeOut(500, function() {
+                                    $(this).remove();
+                                    // Tùy chọn: Cập nhật lại số liệu thống kê ở đầu trang
+                                });
+                                alert(response.message);
+                            } else {
+                                alert('Không thể xóa: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Lỗi kết nối: Không thể gửi yêu cầu xóa đến server.');
+                            console.error("AJAX Error:", error);
+                        }
+                    });
+                }   
+            });
         });
 
     </script>

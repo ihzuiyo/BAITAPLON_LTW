@@ -732,3 +732,55 @@ SELECT * FROM HomeNotices;
 SELECT * FROM FeaturedTeachers;
 SELECT * FROM Reports;
 GO
+
+
+
+/* -----------------------------------------------------------
+   BƯỚC 1: CHÈN 5 BẢN GHI USER (ID 6 ĐẾN 10)
+   - Giả định RoleId = 3 (Student) cho SV và RoleId = 2 (Teacher) cho GV
+   - Mật khẩu: '123456' cho tất cả
+----------------------------------------------------------- */
+
+SET IDENTITY_INSERT Users ON;
+GO
+
+-- 6: SV001 - Nguyễn Mạnh Tiến (Role 3: Student)
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status, DateCreated) VALUES
+(6, 3, N'tien.nm', N'123456', N'Nguyễn Mạnh Tiến', N'tien.nm@itcenter.edu', '0966666666', N'Active', GETDATE());
+
+-- 7: SV002 - Nguyễn Văn A (Role 3: Student)
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status, DateCreated) VALUES
+(7, 3, N'a.nv', N'123456', N'Nguyễn Văn A', N'a.nv@itcenter.edu', '0977777777', N'Active', GETDATE());
+
+-- 8: SV003 - Trần Thị B (Role 3: Student)
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status, DateCreated) VALUES
+(8, 3, N'b.tt', N'123456', N'Trần Thị B', N'b.tt@itcenter.edu', '0988888888', N'Active', GETDATE());
+
+-- 9: SV004 - Lê Minh C (Role 3: Student)
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status, DateCreated) VALUES
+(9, 3, N'c.lm', N'123456', N'Lê Minh C', '0999999999', N'c.lm@itcenter.edu', N'Active', GETDATE());
+
+-- 10: SV005 - Phạm Hoàng D (Role 3: Student)
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, PhoneNumber, Status, DateCreated) VALUES
+(10, 3, N'd.ph', N'123456', N'Phạm Hoàng D', N'd.ph@itcenter.edu', '0912345678', N'Active', GETDATE());
+
+SET IDENTITY_INSERT Users OFF;
+GO
+
+/* -----------------------------------------------------------
+   BƯỚC 2: CẬP NHẬT LIÊN KẾT KHÓA NGOẠI (FK)
+   - Liên kết các bản ghi Students hiện có tới các UserId mới.
+   (Chỉ cần thiết nếu bạn đã xóa và không chèn lại Students cùng lúc)
+----------------------------------------------------------- */
+
+-- Cập nhật liên kết Students (Giả định StudentId 1-5 tồn tại)
+UPDATE Students SET UserId = 6 WHERE StudentCode = 'SV001'; -- Cần đảm bảo StudentId 1 khớp với SV001
+UPDATE Students SET UserId = 7 WHERE StudentCode = 'SV002';
+UPDATE Students SET UserId = 8 WHERE StudentCode = 'SV003';
+UPDATE Students SET UserId = 9 WHERE StudentCode = 'SV004';
+UPDATE Students SET UserId = 10 WHERE StudentCode = 'SV005';
+GO
+
+-- Kết quả kiểm tra
+SELECT * FROM Users WHERE UserId BETWEEN 6 AND 10;
+SELECT * FROM Students WHERE UserId BETWEEN 6 AND 10;
