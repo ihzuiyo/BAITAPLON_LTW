@@ -2,11 +2,15 @@
 @{
     ViewData["Title"] = "Quản Lý Học Phí";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    
+
     var totalRevenue = Model.Sum(t => t.AmountPaid);
     var totalPending = Model.Where(t => t.Status == "Pending").Sum(t => t.TotalFee - t.AmountPaid);
     var totalPaid = Model.Count(t => t.Status == "Paid");
-    var totalOverdue = Model.Count(t => t.Status == "Overdue");
+    var totalOverdue = Model.Count(t =>
+        t.TotalFee > t.AmountPaid && // Chỉ xét nếu còn nợ
+        t.DueDate.HasValue &&
+        t.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now // Hạn đóng đã qua
+    );
 }
 
 <div class="dashboard-header">
@@ -15,12 +19,16 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
             <i class="fas fa-plus-circle"></i> Ghi Nhận Thanh Toán
         </button>
-        <button class="btn btn-success">
-            <i class="fas fa-file-excel"></i> Xuất Excel
-        </button>
-        <button class="btn btn-info">
+
+        <form asp-action="ExportExcelTuition" asp-controller="Admin" method="post" class="d-inline">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+        </form>
+
+        <a asp-action="PrintReport" asp-controller="Admin" class="btn btn-info" target="_blank">
             <i class="fas fa-print"></i> In Báo Cáo
-        </button>
+        </a>
     </div>
 </div>
 
@@ -96,55 +104,49 @@
     </div>
     <div class="card-body">
         <div class="table-controls mb-4">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="searchTuition" placeholder="Tìm kiếm sinh viên, lớp...">
+            <form asp-action="Tuitions" asp-controller="Admin" method="get" id="filterForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" placeholder="Tìm kiếm sinh viên, lớp..." value="@ViewData["CurrentSearch"]">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="filterStatus" onchange="document.getElementById('filterForm').submit()">
+                            <option value="" selected="@(ViewData["CurrentStatus"] == null || ViewData["CurrentStatus"].ToString() == "" ? "selected" : null)">Tất cả trạng thái</option>
+                            <option value="Paid" selected="@("Paid".Equals(ViewData["CurrentStatus"]))">Đã thanh toán</option>
+                            <option value="Pending" selected="@("Pending".Equals(ViewData["CurrentStatus"]))">Chưa thanh toán</option>
+                            <option value="Overdue" selected="@("Overdue".Equals(ViewData["CurrentStatus"]))">Quá hạn</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="filterMonth" onchange="document.getElementById('filterForm').submit()">
+                            <option value="" selected="@(ViewData["CurrentMonth"] == null ? "selected" : null)">Tất cả tháng</option>
+                            @for (int i = 1; i <= 12; i++)
+                            {
+                                <option value="@i" selected="@(ViewData["CurrentMonth"]?.ToString() == i.ToString())">Tháng @i</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="sortBy" onchange="document.getElementById('filterForm').submit()">
+                            <option value="newest" selected="@("newest".Equals(ViewData["CurrentSort"]))">Mới nhất</option>
+                            <option value="oldest" selected="@("oldest".Equals(ViewData["CurrentSort"]))">Cũ nhất</option>
+                            <option value="amount_desc" selected="@("amount_desc".Equals(ViewData["CurrentSort"]))">Số tiền giảm dần</option>
+                            <option value="amount_asc" selected="@("amount_asc".Equals(ViewData["CurrentSort"]))">Số tiền tăng dần</option>
+                            <option value="overdue" selected="@("overdue".Equals(ViewData["CurrentSort"]))">Quá hạn trước</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="entriesPerPage" onchange="document.getElementById('filterForm').submit()">
+                            <option value="10" selected="@(ViewData["CurrentEntries"]?.ToString() == "10" || ViewData["CurrentEntries"] == null)">10 dòng</option>
+                            <option value="25" selected="@(ViewData["CurrentEntries"]?.ToString() == "25")">25 dòng</option>
+                            <option value="50" selected="@(ViewData["CurrentEntries"]?.ToString() == "50")">50 dòng</option>
+                        </select>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="filterStatus">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="Paid">Đã thanh toán</option>
-                        <option value="Pending">Chưa thanh toán</option>
-                        <option value="Overdue">Quá hạn</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="filterMonth">
-                        <option value="">Tất cả tháng</option>
-                        <option value="1">Tháng 1</option>
-                        <option value="2">Tháng 2</option>
-                        <option value="3">Tháng 3</option>
-                        <option value="4">Tháng 4</option>
-                        <option value="5">Tháng 5</option>
-                        <option value="6">Tháng 6</option>
-                        <option value="7">Tháng 7</option>
-                        <option value="8">Tháng 8</option>
-                        <option value="9">Tháng 9</option>
-                        <option value="10">Tháng 10</option>
-                        <option value="11">Tháng 11</option>
-                        <option value="12">Tháng 12</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="sortBy">
-                        <option value="newest">Mới nhất</option>
-                        <option value="oldest">Cũ nhất</option>
-                        <option value="amount_desc">Số tiền giảm dần</option>
-                        <option value="amount_asc">Số tiền tăng dần</option>
-                        <option value="overdue">Quá hạn trước</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="entriesPerPage">
-                        <option value="10">10 dòng</option>
-                        <option value="25">25 dòng</option>
-                        <option value="50">50 dòng</option>
-                    </select>
-                </div>
-            </div>
+            </form>
         </div>
 
         <div class="table-responsive">
@@ -175,7 +177,7 @@
                         var remaining = tuition.TotalFee - tuition.AmountPaid;
                         var percentage = tuition.TotalFee > 0 ? (tuition.AmountPaid / tuition.TotalFee) * 100 : 0;
                         var progressBarClass = percentage == 100 ? "bg-success" : percentage >= 50 ? "bg-info" : "bg-warning";
-                        
+
                         var statusBadge = tuition.Status switch
                         {
                             "Paid" => "bg-success",
@@ -183,7 +185,7 @@
                             "Overdue" => "bg-danger",
                             _ => "bg-secondary"
                         };
-                        
+
                         var statusText = tuition.Status switch
                         {
                             "Paid" => "Đã thanh toán",
@@ -193,7 +195,7 @@
                         };
 
                         var isOverdue = tuition.DueDate.HasValue && tuition.DueDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Now && remaining > 0;
-                        
+
                         <tr class="@(isOverdue ? "table-danger-light" : "")">
                             <td><input type="checkbox" class="row-checkbox"></td>
                             <td><strong class="text-primary">#@tuition.TuitionId</strong></td>
@@ -233,8 +235,8 @@
                             <td>
                                 <div class="payment-progress">
                                     <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar @progressBarClass" role="progressbar" 
-                                             style="width: @percentage%" 
+                                        <div class="progress-bar @progressBarClass" role="progressbar"
+                                             style="width: @percentage%"
                                              aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
                                             @percentage.ToString("F0")%
                                         </div>
@@ -258,26 +260,42 @@
                                 <span class="badge @statusBadge">@statusText</span>
                                 @if (isOverdue)
                                 {
-                                    <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Quá hạn</small>
+                                    <br>
+
+                                    <small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Quá hạn</small>
                                 }
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" title="Chi tiết">
+                                    <button class="btn btn-sm btn-info open-detail-modal"
+                                            title="Chi tiết"
+                                            data-tuition-id="@tuition.TuitionId"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#tuitionDetailModal">
                                         <i class="fas fa-eye"></i>
                                     </button>
+
                                     @if (remaining > 0)
                                     {
-                                        <button class="btn btn-sm btn-success" title="Thu tiền">
+                                        <button class="btn btn-sm btn-success open-payment-modal"
+                                                title="Thu tiền"
+                                                data-tuition-id="@tuition.TuitionId">
                                             <i class="fas fa-money-bill"></i>
                                         </button>
+
                                     }
-                                    <button class="btn btn-sm btn-primary" title="Lịch sử thanh toán">
+
+                                    <a href="#"
+                                       class="btn btn-sm btn-primary btn-history"
+                                       title="Lịch sử thanh toán"
+                                       data-tuition-id="@tuition.TuitionId">
                                         <i class="fas fa-history"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="In biên lai">
+                                    </a>
+
+                                    <a href="@Url.Action("PrintReceipt", "Admin", new { id = tuition.TuitionId })"
+                                       class="btn btn-sm btn-warning" title="In biên lai" target="_blank">
                                         <i class="fas fa-print"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -286,24 +304,82 @@
             </table>
         </div>
 
+        @{
+            // Lấy thông tin phân trang từ ViewData (Cần Controller thiết lập)
+            int currentPage = (int)(ViewData["CurrentPage"] ?? 1);
+            int totalCount = (int)(ViewData["TotalCount"] ?? Model.Count());
+            int entriesPerPage = (int)(ViewData["CurrentEntries"] ?? 10);
+
+            // Tính toán tổng số trang
+            int totalPages = (int)Math.Ceiling((double)totalCount / entriesPerPage);
+
+            // Tính toán hiển thị 'từ' và 'đến'
+            int startEntry = (currentPage - 1) * entriesPerPage + 1;
+            int endEntry = Math.Min(currentPage * entriesPerPage, totalCount);
+
+            // Lấy tất cả tham số lọc hiện tại (trừ pageNumber) để duy trì trạng thái
+            var routeValues = new Dictionary<string, string>();
+            if (routeValues.ContainsKey("pageNumber"))
+            {
+                routeValues.Remove("pageNumber");
+            }
+        }
+
         <div class="pagination-container">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="pagination-info">
-                    Hiển thị <strong>1</strong> đến <strong>@Math.Min(10, Model.Count())</strong> trong tổng số <strong>@Model.Count()</strong> khoản học phí
+                    Hiển thị <strong>@startEntry</strong> đến <strong>@endEntry</strong> trong tổng số <strong>@totalCount</strong> khoản học phí
                 </div>
-                <nav>
-                    <ul class="pagination mb-0">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
-                        </li>
-                    </ul>
-                </nav>
+
+                @if (totalPages > 1)
+                {
+                    <nav>
+                        <ul class="pagination mb-0">
+
+                            @* ---- NÚT PREVIOUS ---- *@
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : null)">
+
+                                @{
+                                    routeValues["pageNumber"] = (currentPage - 1).ToString();
+                                }
+
+                                <a class="page-link"
+                                   asp-action="Index"
+                                   asp-all-route-data="@(routeValues)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            @* ---- VÒNG LẶP SỐ TRANG ---- *@
+                            @for (int i = 1; i <= totalPages; i++)
+                            {
+                                routeValues["pageNumber"] = i.ToString();
+
+                                <li class="page-item @(i == currentPage ? "active" : null)">
+                                    <a class="page-link"
+                                       asp-action="Index"
+                                       asp-all-route-data="@(routeValues)">
+                                        @i
+                                    </a>
+                                </li>
+                            }
+
+                            @* ---- NÚT NEXT ---- *@
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : null)">
+                                @{
+                                    routeValues["pageNumber"] = (currentPage + 1).ToString();
+                                }
+
+                                <a class="page-link"
+                                   asp-action="Index"
+                                   asp-all-route-data="@(routeValues)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+
+                        </ul>
+                    </nav>
+                }
             </div>
         </div>
     </div>
@@ -320,11 +396,12 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="recordPaymentForm">
+                <form id="recordPaymentForm" asp-action="RecordPayment" asp-controller="Admin" method="post">
+                    @Html.AntiForgeryToken()
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-user-graduate"></i> Sinh Viên <span class="text-danger">*</span></label>
-                            <select class="form-select" required>
+                            <select class="form-select" id="selectStudentTuition" name="tuitionId" required>
                                 <option value="">-- Chọn sinh viên --</option>
                                 @foreach (var tuition in Model.Where(t => t.Status != "Paid"))
                                 {
@@ -336,36 +413,36 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-chalkboard"></i> Lớp Học</label>
-                            <input type="text" class="form-control" readonly placeholder="Sẽ hiển thị sau khi chọn SV">
+                            <input type="text" class="form-control" id="modalClassName" readonly placeholder="Sẽ hiển thị sau khi chọn SV">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Tổng Học Phí</label>
-                            <input type="text" class="form-control" readonly placeholder="0 VNĐ">
+                            <input type="text" class="form-control" id="modalTotalFee" readonly placeholder="0 VNĐ">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Đã Đóng</label>
-                            <input type="text" class="form-control" readonly placeholder="0 VNĐ">
+                            <input type="text" class="form-control" id="modalAmountPaid" readonly placeholder="0 VNĐ">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label text-danger">Còn Lại</label>
-                            <input type="text" class="form-control fw-bold text-danger" readonly placeholder="0 VNĐ">
+                            <input type="text" class="form-control fw-bold text-danger" id="modalRemaining" readonly placeholder="0 VNĐ">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-money-bill"></i> Số Tiền Thu <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" placeholder="Nhập số tiền" required>
+                            <input type="number" class="form-control" id="inputAmountPaid" name="amountPaid" placeholder="Nhập số tiền" required min="1000">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-calendar"></i> Ngày Thu</label>
-                            <input type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                            <input type="date" class="form-control" name="paymentDate" value="@DateTime.Now.ToString("yyyy-MM-dd")">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-sticky-note"></i> Ghi Chú</label>
-                        <textarea class="form-control" rows="3" placeholder="Ghi chú (nếu có)..."></textarea>
+                        <textarea class="form-control" name="note" rows="3" placeholder="Ghi chú (nếu có)..."></textarea>
                     </div>
                 </form>
             </div>
@@ -373,14 +450,55 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-success">
+                <button type="submit" class="btn btn-success" form="recordPaymentForm">
                     <i class="fas fa-save"></i> Lưu Thanh Toán
                 </button>
             </div>
         </div>
     </div>
 </div>
-
+<!-- Modal: Tuition Detail -->
+<div class="modal fade" id="tuitionDetailModal" tabindex="-1" aria-labelledby="tuitionDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="tuitionDetailModalLabel">
+                    <i class="fas fa-eye"></i> Chi Tiết Khoản Học Phí
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="tuitionDetailModalBody">
+                <p class="text-center text-muted">Đang tải dữ liệu chi tiết...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal: Payment History -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-labelledby="paymentHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="paymentHistoryModalLabel">
+                    <i class="fas fa-history"></i> Lịch Sử Thanh Toán Khoản Học Phí #<span id="historyTuitionIdDisplay"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="paymentHistoryModalBody">
+                <p class="text-center text-muted">Đang tải lịch sử giao dịch...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <style>
         .finance-card {
@@ -393,65 +511,65 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: all 0.3s;
         }
-        
-        .finance-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-        
+
+            .finance-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            }
+
         .card-revenue {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         }
-        
+
         .card-pending {
             background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
         }
-        
+
         .card-paid {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
-        
+
         .card-overdue {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
-        
+
         .finance-icon {
             font-size: 45px;
             opacity: 0.8;
         }
-        
+
         .finance-content h3 {
             margin: 0;
             font-size: 24px;
             font-weight: 700;
         }
-        
+
         .finance-content p {
             margin: 5px 0 0 0;
             font-size: 13px;
             opacity: 0.9;
         }
-        
+
         .student-info, .class-info {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .payment-progress {
             min-width: 100px;
         }
-        
+
         .table-danger-light {
             background-color: #f8d7da !important;
         }
-        
+
         .header-filters .badge {
             font-size: 0.85em;
             padding: 6px 12px;
         }
     </style>
-    
+
     <script>
         $(document).ready(function() {
             // Search functionality
@@ -461,12 +579,12 @@
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
                 });
             });
-            
+
             // Select all checkboxes
             $('#selectAll').click(function() {
                 $('.row-checkbox').prop('checked', this.checked);
             });
-            
+
             // Filter by status
             $('#filterStatus').change(function() {
                 var status = $(this).val().toLowerCase();
@@ -477,6 +595,209 @@
                         var rowStatus = $(this).find('.badge').first().text().toLowerCase();
                         $(this).toggle(rowStatus.indexOf(status) > -1);
                     }
+                });
+            });
+            $('#selectStudentTuition').change(function() {
+                var tuitionId = $(this).val();
+
+                // Hàm định dạng tiền tệ
+                var formatVND = (amount) => (amount ? amount.toLocaleString('vi-VN') : '0') + ' VNĐ';
+
+                // Reset các trường
+                $('#modalClassName').val('');
+                $('#modalTotalFee').val('0 VNĐ');
+                $('#modalAmountPaid').val('0 VNĐ');
+                $('#modalRemaining').val('0 VNĐ');
+                $('#inputAmountPaid').val('');
+                $('#inputAmountPaid').removeAttr('max');
+
+                if (tuitionId) {
+                    // Gửi yêu cầu AJAX đến Controller để lấy thông tin chi tiết
+                    $.get('/Admin/GetTuitionDetails', { tuitionId: tuitionId }, function(data) {
+                        if (data && data.className) {
+                            $('#modalClassName').val(data.className);
+                            $('#modalTotalFee').val(formatVND(data.totalFee));
+                            $('#modalAmountPaid').val(formatVND(data.amountPaid));
+                            $('#modalRemaining').val(formatVND(data.remaining));
+
+                            // Đặt giá trị còn lại vào ô Số Tiền Thu và thiết lập giới hạn
+                            $('#inputAmountPaid').val(data.remaining);
+                            $('#inputAmountPaid').attr('max', data.remaining);
+                        }
+                    }).fail(function() {
+                        console.error('Lỗi khi tải thông tin học phí.');
+                    });
+                }
+            });
+            // Xử lý nút "Thu tiền" trong bảng
+            $(document).ready(function () {
+
+                // Hàm format tiền tệ (cần thiết nếu muốn hiển thị lại)
+                var formatVND = (amount) => (amount ? amount.toLocaleString('vi-VN') : '0') + ' VNĐ';
+
+                // Lắng nghe sự kiện click trên nút "Thu tiền" trong bảng
+                $(".open-payment-modal").click(function () {
+                    var tuitionId = $(this).data("tuition-id");
+
+                    // Gửi yêu cầu AJAX để lấy chi tiết khoản phí
+                    $.get('/Admin/GetTuitionDetails', { tuitionId: tuitionId }, function(data) {
+                        if (data && data.remainingDecimal > 0) {
+
+                            // 1. Đặt tuitionId vào dropdown (cần cho việc submit form)
+                            $('#selectStudentTuition').val(tuitionId);
+
+                            // 2. Điền dữ liệu chi tiết vào các trường trong Modal
+                            // (Sử dụng ID đúng như trong Modal HTML của bạn)
+                            $('#modalClassName').val(data.className);
+                            $('#modalTotalFee').val(formatVND(data.totalFeeDecimal)); // Giả sử Controller trả về TotalFeeDecimal
+                            $('#modalAmountPaid').val(formatVND(data.amountPaidDecimal)); // Giả sử Controller trả về AmountPaidDecimal
+                            $('#modalRemaining').val(formatVND(data.remainingDecimal));
+
+                            // 3. Thiết lập số tiền cần thu và giới hạn tối đa
+                            $('#inputAmountPaid').val(data.remainingDecimal);
+                            $('#inputAmountPaid').attr('max', data.remainingDecimal);
+
+                            // 4. Mở Modal
+                            // Khởi tạo Bootstrap Modal và hiển thị
+                            var paymentModal = new bootstrap.Modal(document.getElementById('recordPaymentModal'));
+                            paymentModal.show();
+
+                        } else if (data && data.remainingDecimal <= 0) {
+                            alert('Khoản học phí này đã được thanh toán đủ.');
+                        } else {
+                            alert('Không thể tải thông tin học phí.');
+                        }
+                    });
+                });
+            });
+            // --- Xử lý nút XEM CHI TIẾT (open-detail-modal) ---
+            var formatVND = (amount) => (amount ? amount.toLocaleString('vi-VN') : '0') + ' VNĐ';
+            $(document).on('click', '.open-detail-modal', function (e) {
+                e.preventDefault();
+                const tuitionId = $(this).data('tuition-id');
+                const $modalBody = $('#tuitionDetailModalBody');
+
+                // 1. Hiển thị trạng thái Loading
+                $modalBody.html('<p class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i><br> Đang tải chi tiết học phí...</p>');
+                $('#tuitionDetailModalLabel').text(`Chi Tiết Khoản Học Phí ID: #${tuitionId}`);
+
+                // 2. Gọi AJAX để lấy dữ liệu chi tiết
+                // Tận dụng Action GetTuitionDetails đã có, nhưng cần thêm logic hiển thị.
+                $.get('/Admin/GetTuitionDetails', { tuitionId: tuitionId }, function(data) {
+                    // Lấy thông tin từ hàng trong bảng (giả định)
+                    const $row = $(`.open-detail-modal[data-tuition-id="${tuitionId}"]`).closest('tr');
+                    const studentName = $row.find('.student-info strong').text().trim();
+                    const studentCode = $row.find('.student-info small').text().trim();
+                    const courseName = $row.find('.class-info small').text().replace(/.* fas fa-book.* /, '').trim();
+                    const statusText = $row.find('.badge').text().trim();
+                    const dueDate = $row.find('td:nth-child(9) small').text().trim().replace(/.*fas fa-calendar-times|check.* /, '').trim();
+
+                    const remaining = data.remainingDecimal;
+                    const remainingText = remaining > 0 ? `<strong class="text-danger">${formatVND(remaining)}</strong>` : `<strong class="text-success">Đã hoàn tất</strong>`;
+                    const paymentStatus = remaining > 0 ? `<span class="badge bg-warning text-dark">${statusText}</span>` : `<span class="badge bg-success">${statusText}</span>`;
+
+                    // 3. Tạo HTML hiển thị
+                    const detailHtml = `
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <p><strong><i class="fas fa-user-graduate text-primary"></i> Sinh Viên:</strong></p>
+                                <p class="form-control-static">${studentName} (<small>${studentCode}</small>)</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <p><strong><i class="fas fa-chalkboard text-primary"></i> Lớp Học:</strong></p>
+                                <p class="form-control-static">${data.className} (<small>${courseName}</small>)</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Tổng Học Phí</p>
+                                <h4 class="text-dark">${formatVND(data.totalFeeDecimal)}</h4>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Đã Đóng</p>
+                                <h4 class="text-success">${formatVND(data.amountPaidDecimal)}</h4>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Còn Lại</p>
+                                <h4 class="text-danger">${formatVND(data.remainingDecimal)}</h4>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-calendar-alt text-primary"></i> Hạn Đóng:</strong></p>
+                                <p class="form-control-static">${dueDate}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-info-circle text-primary"></i> Trạng Thái:</strong></p>
+                                <p class="form-control-static">${paymentStatus}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <p><strong><i class="fas fa-sticky-note text-primary"></i> Ghi Chú Thanh Toán (Tạm thời):</strong></p>
+                            <p class="border p-3 rounded bg-light text-muted">Chức năng lưu ghi chú chi tiết sẽ được thêm vào trong tương lai.</p>
+                        </div>
+                    `;
+                    $modalBody.html(detailHtml);
+                }).fail(function() {
+                    $modalBody.html('<p class="text-danger text-center p-5"><i class="fas fa-exclamation-triangle fa-2x"></i><br> Lỗi: Không thể tải chi tiết khoản học phí.</p>');
+                    console.error('Lỗi khi tải thông tin học phí chi tiết.');
+                });
+            });
+            // --- Xử lý nút LỊCH SỬ THANH TOÁN (btn-history) ---
+            $(document).on('click', '.btn-history', function (e) {
+                e.preventDefault();
+                const tuitionId = $(this).data('tuition-id');
+                const $modalBody = $('#paymentHistoryModalBody');
+
+                // Hiển thị trạng thái Loading
+                $('#historyTuitionIdDisplay').text(tuitionId);
+                $modalBody.html('<p class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i><br> Đang tải lịch sử giao dịch...</p>');
+
+                // 1. Gọi AJAX để lấy dữ liệu lịch sử
+                $.get('/Admin/GetPaymentHistory', { tuitionId: tuitionId }, function(response) {
+                    if (response.success && response.history.length > 0) {
+                        let historyHtml = `
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Mã Biên Lai</th>
+                                        <th>Số Tiền (VNĐ)</th>
+                                        <th>Ngày Thu</th>
+                                        <th>Người Thu</th>
+                                        <th>Ghi Chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+
+                        response.history.forEach(item => {
+                            historyHtml += `
+                                <tr>
+                                    <td><strong>${item.receiptCode}</strong></td>
+                                    <td class="text-success fw-bold">${item.amount}</td>
+                                    <td>${item.paymentDate}</td>
+                                    <td>${item.cashierName}</td>
+                                    <td>${item.note || '<span class="text-muted fst-italic">Không có</span>'}</td>
+                                </tr>
+                            `;
+                        });
+
+                        historyHtml += `
+                                </tbody>
+                            </table>
+                        `;
+                        $modalBody.html(historyHtml);
+                    } else {
+                        $modalBody.html('<p class="text-center p-5 text-info"><i class="fas fa-info-circle fa-2x"></i><br> Khoản học phí này chưa có giao dịch nào được ghi nhận.</p>');
+                    }
+
+                    // 2. Mở Modal
+                    var historyModal = new bootstrap.Modal(document.getElementById('paymentHistoryModal'));
+                    historyModal.show();
+                }).fail(function() {
+                    $modalBody.html('<p class="text-danger text-center p-5"><i class="fas fa-exclamation-triangle fa-2x"></i><br> Lỗi: Không thể tải lịch sử giao dịch.</p>');
                 });
             });
         });

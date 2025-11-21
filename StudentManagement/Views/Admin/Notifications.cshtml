@@ -2,11 +2,14 @@
 @{
     ViewData["Title"] = "Quản Lý Thông Báo";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    
-    var totalNotifications = Model.Count();
-    var todayNotifications = Model.Count(n => n.CreatedDate.Date == DateTime.Today);
-    var totalRecipients = Model.Sum(n => n.NotificationRecipients.Count);
-    var totalRead = Model.Sum(n => n.NotificationRecipients.Count(r => r.IsRead));
+
+    var totalNotifications = (int)(ViewBag.TotalNotifications ?? 0);
+    var todayNotifications = (int)(ViewBag.TodayNotifications ?? 0);
+    var totalRecipients = (int)(ViewBag.TotalRecipients ?? 0);
+    var totalRead = (int)(ViewBag.TotalRead ?? 0);
+
+    string currentFilterDate = (string)ViewBag.CurrentFilterDate;
+    string currentSortBy = (string)ViewBag.CurrentSortBy;
 }
 
 <div class="dashboard-header">
@@ -111,30 +114,30 @@
                         </div>
                         <div class="col-md-3">
                             <select class="form-select" id="filterDate">
-                                <option value="">Tất cả thời gian</option>
-                                <option value="today">Hôm nay</option>
-                                <option value="week">Tuần này</option>
-                                <option value="month">Tháng này</option>
+                                <option value="all" selected="@(currentFilterDate == "all" ? "selected" : null)">Tất cả thời gian</option>
+                                <option value="today" selected="@(currentFilterDate == "today" ? "selected" : null)">Hôm nay</option>
+                                <option value="week" selected="@(currentFilterDate == "week" ? "selected" : null)">Tuần này</option>
+                                <option value="month" selected="@(currentFilterDate == "month" ? "selected" : null)">Tháng này</option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <select class="form-select" id="sortBy">
-                                <option value="newest">Mới nhất</option>
-                                <option value="oldest">Cũ nhất</option>
-                                <option value="most_recipients">Nhiều người nhận</option>
+                                <option value="newest" selected="@(currentSortBy == "newest" ? "selected" : null)">Mới nhất</option>
+                                <option value="oldest" selected="@(currentSortBy == "oldest" ? "selected" : null)">Cũ nhất</option>
+                                <option value="most_recipients" selected="@(currentSortBy == "most_recipients" ? "selected" : null)">Nhiều người nhận</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <div class="notifications-list">
-                    @foreach (var notification in Model.OrderByDescending(n => n.CreatedDate))
+                    @foreach (var notification in Model)
                     {
                         var recipientCount = notification.NotificationRecipients.Count;
                         var readCount = notification.NotificationRecipients.Count(r => r.IsRead);
                         var readPercentage = recipientCount > 0 ? (readCount * 100.0 / recipientCount) : 0;
                         var isRecent = (DateTime.Now - notification.CreatedDate).TotalHours < 24;
-                        
+
                         <div class="notification-card @(isRecent ? "notification-new" : "")">
                             <div class="notification-header-row">
                                 <div class="notification-title-section">
@@ -148,21 +151,30 @@
                                     </h5>
                                 </div>
                                 <div class="notification-actions">
-                                    <button class="btn btn-sm btn-info" title="Xem chi tiết">
+                                    <button class="btn btn-sm btn-info btn-detail"
+                                            title="Xem chi tiết"
+                                            data-id="@notification.NotificationId"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#detailNotificationModal">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <button class="btn btn-sm btn-primary" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-success" title="Gửi lại">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
+                                    @if (notification.CreatedDate <= DateTime.Now)
+                                    {
+                                        <button class="btn btn-sm btn-success btn-resend"
+                                                title="Gửi lại"
+                                                data-id="@notification.NotificationId">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    }
                                     <button class="btn btn-sm btn-danger" title="Xóa">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <div class="notification-content">
                                 <p class="notification-text">
                                     @if (!string.IsNullOrEmpty(notification.Content))
@@ -175,7 +187,7 @@
                                     }
                                 </p>
                             </div>
-                            
+
                             <div class="notification-footer-row">
                                 <div class="notification-meta">
                                     <span class="meta-item">
@@ -195,11 +207,11 @@
                                     <div class="read-progress">
                                         <small class="text-muted">Đã đọc: @readCount/@recipientCount</small>
                                         <div class="progress" style="height: 8px; width: 120px;">
-                                            <div class="progress-bar @(readPercentage > 70 ? "bg-success" : readPercentage > 30 ? "bg-warning" : "bg-danger")" 
-                                                 role="progressbar" 
-                                                 style="width: @readPercentage%" 
-                                                 aria-valuenow="@readPercentage" 
-                                                 aria-valuemin="0" 
+                                            <div class="progress-bar @(readPercentage > 70 ? "bg-success" : readPercentage > 30 ? "bg-warning" : "bg-danger")"
+                                                 role="progressbar"
+                                                 style="width: @readPercentage%"
+                                                 aria-valuenow="@readPercentage"
+                                                 aria-valuemin="0"
                                                  aria-valuemax="100">
                                             </div>
                                         </div>
@@ -294,20 +306,22 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="createNotificationForm">
+                <form id="createNotificationForm" method="post" action="@Url.Action("Create", "Admin")">
+                    @* Thêm Anti-Forgery Token để bảo mật *@
+                    @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-heading"></i> Tiêu Đề <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" placeholder="Nhập tiêu đề thông báo" required>
+                        <input type="text" class="form-control" name="title" placeholder="Nhập tiêu đề thông báo" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><i class="fas fa-align-left"></i> Nội Dung <span class="text-danger">*</span></label>
-                        <textarea class="form-control" rows="5" placeholder="Nhập nội dung thông báo..." required></textarea>
+                        <textarea class="form-control" rows="5" name="content" placeholder="Nhập nội dung thông báo..." required></textarea>
                         <small class="text-muted">Hỗ trợ định dạng HTML cơ bản</small>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-users"></i> Gửi Đến <span class="text-danger">*</span></label>
-                            <select class="form-select" required>
+                            <select class="form-select" name="recipientTarget" id="recipientTargetSelect" required>
                                 <option value="">-- Chọn đối tượng --</option>
                                 <option value="all">Tất cả</option>
                                 <option value="students">Tất cả sinh viên</option>
@@ -318,18 +332,33 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fas fa-clock"></i> Thời Gian Gửi</label>
-                            <select class="form-select">
+                            <select class="form-select" name="sendTime" id="sendTimeSelect">
                                 <option value="now">Gửi ngay</option>
                                 <option value="schedule">Lên lịch gửi</option>
                             </select>
                         </div>
                     </div>
+
+                    <div class="mb-3 d-none" id="classSelectDiv">
+                        <label class="form-label"><i class="fas fa-chalkboard-teacher"></i> Chọn Lớp Học <span class="text-danger">*</span></label>
+                        <select class="form-select" id="classSelect">
+                            <option value="">-- Đang tải Lớp Học --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="individualSelectDiv">
+                        <label class="form-label"><i class="fas fa-user-plus"></i> Chọn Người Dùng Cụ Thể (UserID/Email) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="individualSelect" placeholder="Nhập UserId (ví dụ: 6) hoặc Email (ví dụ: user@example.com)">
+                        <small class="text-danger">Tính năng này giả định bạn nhập UserId hoặc Email của người dùng.</small>
+                    </div>
+
                     <div class="mb-3 d-none" id="scheduleDateTime">
                         <label class="form-label"><i class="fas fa-calendar-alt"></i> Chọn Ngày Giờ</label>
-                        <input type="datetime-local" class="form-control">
+                        <input type="datetime-local" class="form-control" name="scheduleDateTime">
                     </div>
+
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="sendEmail">
+                        <input class="form-check-input" type="checkbox" id="sendEmail" name="sendEmail" value="true">
                         <label class="form-check-label" for="sendEmail">
                             <i class="fas fa-envelope"></i> Gửi thêm qua Email
                         </label>
@@ -340,9 +369,6 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-info">
-                    <i class="fas fa-save"></i> Lưu Nháp
-                </button>
                 <button type="button" class="btn btn-primary">
                     <i class="fas fa-paper-plane"></i> Gửi Thông Báo
                 </button>
@@ -350,7 +376,111 @@
         </div>
     </div>
 </div>
+<!-- Modal: History Notification -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-history"></i> Lịch Sử Hoạt Động Thông Báo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="historyModalBody">
+                <p>Đang tải lịch sử...</p>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal: Detail Notification -->
+<div class="modal fade" id="detailNotificationModal" tabindex="-1" aria-labelledby="detailNotificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="detailNotificationModalLabel">
+                    <i class="fas fa-eye"></i> Chi Tiết Thông Báo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="detailModalBodyContent">
+                <p class="text-center text-muted">Đang tải dữ liệu...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal: Edit Notification -->
+<div class="modal fade" id="editNotificationModal" tabindex="-1" aria-labelledby="editNotificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-body">
+                <form id="editNotificationForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="editNotificationId">
 
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-heading"></i> Tiêu Đề <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" id="editTitle" placeholder="Nhập tiêu đề thông báo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-align-left"></i> Nội Dung <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="5" name="content" id="editContent" placeholder="Nhập nội dung thông báo..." required></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-users"></i> Gửi Đến <span class="text-danger">*</span></label>
+                            <select class="form-select" name="recipientTarget" id="editRecipientTargetSelect" required>
+                                <option value="">-- Chọn đối tượng --</option>
+                                <option value="all">Tất cả</option>
+                                <option value="students">Tất cả sinh viên</option>
+                                <option value="teachers">Tất cả giảng viên</option>
+                                <option value="class">Theo lớp học</option>
+                                <option value="individual">Cá nhân cụ thể</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-clock"></i> Thời Gian Gửi</label>
+                            <select class="form-select" name="sendTime" id="editSendTimeSelect">
+                                <option value="now">Gửi ngay</option>
+                                <option value="schedule">Lên lịch gửi</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="editClassSelectDiv">
+                        <label class="form-label"><i class="fas fa-chalkboard-teacher"></i> Chọn Lớp Học <span class="text-danger">*</span></label>
+                        <select class="form-select" name="recipientTarget" id="editClassSelect">
+                            <option value="">-- Đang tải Lớp Học --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-user-circle"></i> Người Tạo</label>
+                        <input type="text" class="form-control" id="editCreatorNameInput" disabled style="font-weight: 600;">
+                        <small class="text-muted">Không thể thay đổi người tạo.</small>
+                    </div>
+
+                    <div class="mb-3 d-none" id="editScheduleDateTime">
+                        <label class="form-label"><i class="fas fa-calendar-alt"></i> Chọn Ngày Giờ</label>
+                        <input type="datetime-local" class="form-control" name="scheduleDateTime" id="editScheduleDate">
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary" id="saveEditButton">
+                    <i class="fas fa-save"></i> Lưu Chỉnh Sửa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <style>
         .notification-stat-card {
@@ -363,61 +493,61 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: all 0.3s;
         }
-        
-        .notification-stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-        
+
+            .notification-stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            }
+
         .card-total {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        
+
         .card-today {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
-        
+
         .card-sent {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
-        
+
         .card-read {
             background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
         }
-        
+
         .stat-icon-box {
             font-size: 45px;
             opacity: 0.8;
         }
-        
+
         .stat-content-box h3 {
             margin: 0;
             font-size: 32px;
             font-weight: 700;
         }
-        
+
         .stat-content-box p {
             margin: 5px 0;
             font-size: 13px;
             opacity: 0.9;
         }
-        
+
         .stat-trend {
             font-size: 11px;
             opacity: 0.8;
             margin-top: 5px;
         }
-        
-        .stat-trend i {
-            margin-right: 3px;
-        }
-        
+
+            .stat-trend i {
+                margin-right: 3px;
+            }
+
         .notifications-list {
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
-        
+
         .notification-card {
             border: 1px solid #e3e6f0;
             border-radius: 8px;
@@ -425,54 +555,54 @@
             transition: all 0.3s;
             background: #fff;
         }
-        
-        .notification-card:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-color: var(--primary-color);
-        }
-        
+
+            .notification-card:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                border-color: var(--primary-color);
+            }
+
         .notification-new {
             border-left: 4px solid #f5576c;
             background: #fff5f7;
         }
-        
+
         .notification-header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
-        
+
         .notification-title-section {
             display: flex;
             align-items: center;
             gap: 10px;
             flex: 1;
         }
-        
+
         .badge-new {
             font-size: 10px;
             padding: 3px 8px;
         }
-        
+
         .notification-title {
             margin: 0;
             font-size: 16px;
             font-weight: 600;
             color: var(--dark-color);
         }
-        
+
         .notification-content {
             margin: 10px 0;
         }
-        
+
         .notification-text {
             margin: 0;
             color: #6c757d;
             font-size: 14px;
             line-height: 1.6;
         }
-        
+
         .notification-footer-row {
             display: flex;
             justify-content: space-between;
@@ -481,53 +611,53 @@
             padding-top: 10px;
             border-top: 1px solid #f0f0f0;
         }
-        
+
         .notification-meta {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
             font-size: 13px;
         }
-        
+
         .meta-item {
             display: flex;
             align-items: center;
             gap: 5px;
             color: #6c757d;
         }
-        
+
         .notification-stats {
             display: flex;
             align-items: center;
         }
-        
+
         .read-progress {
             text-align: right;
         }
-        
+
         .stats-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
         }
-        
+
         .stats-label {
             font-size: 14px;
             color: #6c757d;
         }
-        
+
         .stats-value {
             font-size: 24px;
             font-weight: 700;
         }
-        
+
         .template-list {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-        
+
         .template-item {
             padding: 12px;
             border: 1px solid #e3e6f0;
@@ -538,45 +668,630 @@
             align-items: center;
             gap: 10px;
         }
-        
-        .template-item:hover {
-            background: #f8f9fa;
-            border-color: var(--primary-color);
-        }
-        
-        .template-item i {
-            font-size: 18px;
-        }
-        
+
+            .template-item:hover {
+                background: #f8f9fa;
+                border-color: var(--primary-color);
+            }
+
+            .template-item i {
+                font-size: 18px;
+            }
+
         .bg-gradient-primary {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         }
-        
+
         .bg-gradient-info {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
-        
+
         .header-badges .badge {
             font-size: 0.85em;
             padding: 6px 12px;
         }
+
+        .template-item.active { /* Thêm CSS cho template được chọn */
+            border-color: #007bff;
+            background-color: #e6f2ff;
+        }
+        /* Thêm CSS cho History Modal */
+        .history-timeline {
+            list-style: none;
+            padding-left: 0;
+            position: relative;
+        }
+
+            .history-timeline:before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #e9ecef;
+                left: 20px; /* Vị trí đường dọc */
+            }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 50px; /* Khoảng cách cho chấm tròn */
+        }
+
+        .timeline-badge {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            top: 0;
+            left: 5px; /* Căn giữa chấm tròn với đường dọc */
+            background: #007bff;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            box-shadow: 0 0 0 3px #fff, inset 0 2px 0 rgba(0,0,0,.08), 0 3px 0 4px rgba(0,0,0,.05);
+            font-size: 14px;
+        }
+
+        .timeline-body {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+            .timeline-body p {
+                margin: 0;
+                font-size: 14px;
+            }
+
+        .timeline-title {
+            font-weight: bold;
+            color: #343a40;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            display: block;
+        }
     </style>
-    
+
     <script>
+        // Địa chỉ URL Action để lấy danh sách lớp học
+        const getClassListUrl = '@Url.Action("GetClassList", "Admin")';
+        const historyUrl = '@Url.Action("History", "Admin")';
+        const exportUrl = '@Url.Action("ExportExcelNotification", "Admin")';
+        const detailUrl = '@Url.Action("GetNotificationDetail", "Admin")/';
+        const detailModalId = '#detailNotificationModal';
+        const resendUrl = '@Url.Action("Resend", "Admin")';
+
+        // --- Hàm TẢI DỮ LIỆU LỚP HỌC (AJAX) ---
+        function loadClasses(selectElement) {
+            selectElement.html('<option value="">Đang tải...</option>'); // Hiển thị trạng thái tải
+
+            $.ajax({
+                url: getClassListUrl,
+                type: 'GET',
+                dataType: 'json',
+                success: function(classes) {
+                    let options = '<option value="">-- Chọn Lớp Học --</option>';
+
+                    if (classes.length === 0) {
+                         options = '<option value="">Không có lớp học nào</option>';
+                    } else {
+                        // Lặp qua dữ liệu lớp học nhận được từ JSON
+                        classes.forEach(cls => {
+                            // Giả định cls có ClassCode, ClassName và CourseName từ Controller
+                            options += `<option value="${cls.classCode}">${cls.className} (${cls.classCode}) - ${cls.courseName}</option>`;
+                        });
+                    }
+                    selectElement.html(options);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Lỗi tải danh sách lớp học:", status, error);
+                    selectElement.html('<option value="">Lỗi: Không tải được danh sách lớp</option>');
+                }
+            });
+        }
+
+        // --- Hàm HỖ TRỢ TEMPLATE ---
+        function getTemplateContent(key) {
+            switch(key) {
+                // ... (Logic template giữ nguyên) ...
+                case 'welcome':
+                    return { title: "Chào mừng sinh viên mới!", content: "Chúc mừng bạn đã gia nhập cộng đồng học tập của chúng tôi! Mọi thông tin cần thiết về khóa học có thể tìm thấy trên hệ thống LMS." };
+                case 'exam':
+                    return { title: "Thông báo lịch thi học kỳ 1", content: "Lịch thi chi tiết đã được cập nhật. Vui lòng kiểm tra trên cổng thông tin sinh viên. Mọi thắc mắc liên hệ phòng đào tạo." };
+                case 'fee':
+                    return { title: "Nhắc nhở học phí", content: "Học phí kỳ này sẽ đến hạn vào ngày [Ngày Cụ Thể]. Vui lòng thanh toán đúng hạn để tránh phát sinh phí phạt." };
+                case 'event':
+                    return { title: "Sự kiện: Hội thảo Hướng nghiệp", content: "Hội thảo hướng nghiệp với chủ đề [Tên Chủ Đề] sẽ diễn ra vào [Ngày/Giờ]. Đăng ký tham gia tại quầy dịch vụ sinh viên." };
+                case 'holiday':
+                    return { title: "Thông báo Lịch nghỉ lễ Quốc Khánh", content: "Trung tâm sẽ nghỉ lễ từ [Ngày Bắt Đầu] đến [Ngày Kết Thúc]. Chúc các bạn một kỳ nghỉ vui vẻ!" };
+                default:
+                    return { title: "", content: "" };
+            }
+        }
+
+        // --- Hàm Xử lý Ẩn/Hiện và Thuộc tính Name (Tâm điểm của yêu cầu) ---
+        function handleEditRecipientTargetChange(selectedValue) {
+            // 1. Reset trạng thái ban đầu
+            $('#editClassSelectDiv, #editIndividualSelectDiv').addClass('d-none');
+
+            // 2. Reset thuộc tính name và required
+            $('#editRecipientTargetSelect').attr('name', 'recipientTarget').prop('required', true);
+            $('#editClassSelect').removeAttr('name').prop('required', false);
+            $('#editIndividualSelect').removeAttr('name').prop('required', false);
+
+            if (selectedValue === 'class') {
+                $('#editClassSelectDiv').removeClass('d-none');
+                $('#editClassSelect').attr('name', 'recipientTarget').prop('required', true);
+                $('#editRecipientTargetSelect').removeAttr('name').prop('required', false);
+
+                // Tải dữ liệu lớp học nếu cần
+                if ($('#editClassSelect option').length <= 1) {
+                    loadClasses($('#editClassSelect'));
+                }
+            } else if (selectedValue === 'individual') {
+                $('#editIndividualSelectDiv').removeClass('d-none');
+                $('#editIndividualSelect').attr('name', 'recipientTarget').prop('required', true);
+                $('#editRecipientTargetSelect').removeAttr('name').prop('required', false);
+            }
+        }
+        function renderHistory(historyData) {
+            if (!historyData || historyData.length === 0) {
+                return `<div class="alert alert-info text-center"><i class="fas fa-info-circle"></i> Hiện không có hoạt động thông báo nào được ghi lại.</div>`;
+            }
+
+            let timelineHtml = '<ul class="history-timeline">';
+
+            historyData.forEach(item => {
+                // Lấy thông tin Badge và Icon
+                let badgeIcon = 'fa-clock';
+                let badgeBg = 'bg-secondary';
+
+                switch(item.type) {
+                    case 'Gửi':
+                        badgeIcon = 'fa-paper-plane';
+                        badgeBg = 'bg-primary';
+                        break;
+                    case 'Sửa':
+                        badgeIcon = 'fa-edit';
+                        badgeBg = 'bg-warning';
+                        break;
+                    case 'Xóa':
+                        badgeIcon = 'fa-trash';
+                        badgeBg = 'bg-danger';
+                        break;
+                    case 'Tự động':
+                        badgeIcon = 'fa-robot';
+                        badgeBg = 'bg-info';
+                        break;
+                }
+                // Khởi tạo đối tượng Date từ chuỗi ISO (C# DateTime thường trả về)
+                let date = new Date(item.time);
+
+                // Kiểm tra xem Date có hợp lệ không
+                if (isNaN(date)) {
+                    date = new Date();
+                }
+
+                // Định dạng thời gian/ngày tháng TƯỜNG MINH cho múi giờ địa phương (vi-VN)
+                let timeString = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                let dateString = date.toLocaleDateString('vi-VN');
+
+                timelineHtml += `
+                    <li class="timeline-item">
+                        <span class="timeline-badge ${badgeBg}">
+                            <i class="fas ${badgeIcon}"></i>
+                        </span>
+                        <div class="timeline-body">
+                            <div class="timeline-title">${item.action}</div>
+                            <span class="timeline-date">
+                                <i class="fas fa-calendar-alt"></i> ${dateString} ${timeString} -
+                                <i class="fas fa-user-circle"></i> Người thực hiện: <strong>${item.user}</strong>
+                            </span>
+                        </div>
+                    </li>
+                `;
+            });
+
+            timelineHtml += '</ul>';
+            return timelineHtml;
+        }
+        function createDetailHtml(data) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-heading text-primary"></i> Tiêu đề:</strong></p>
+                        <p class="form-control-static fw-bold fs-5">${data.title}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-clock text-primary"></i> Ngày/Giờ Gửi:</strong></p>
+                        <p class="form-control-static">${data.scheduleDate} ${data.scheduleTime}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-4">
+                    <p><strong><i class="fas fa-align-left text-primary"></i> Nội dung:</strong></p>
+                    <div class="border p-3 rounded bg-light">
+                        <p>${data.content}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-users text-primary"></i> Đối tượng:</strong></p>
+                        <p class="form-control-static">${data.recipientGroup}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-user-check text-primary"></i> Tổng người nhận:</strong></p>
+                        <p class="form-control-static">${data.totalRecipients} người</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <p><strong><i class="fas fa-list-ul text-primary"></i> Chi tiết Người nhận:</strong></p>
+                    <span class="badge bg-secondary">${data.recipients.join('</span> <span class="badge bg-secondary">')}</span>
+                </div>
+            `;
+            return html;
+        }
+
         $(document).ready(function() {
-            // Search functionality
+
+            const form = $('#createNotificationForm');
+
+            // --- 1. Logic tìm kiếm (Keyup) ---
             $('#searchNotification').on('keyup', function() {
                 var value = $(this).val().toLowerCase();
                 $('.notification-card').filter(function() {
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
                 });
             });
-            
-            // Template selection
+
+            // --- 2. Xử lý chức năng Template Selection ---
             $('.template-item').click(function() {
+                // ... (Logic template selection giữ nguyên) ...
                 $('.template-item').removeClass('active');
                 $(this).addClass('active');
-                // Load template content here
+
+                var templateKey = $(this).data('template');
+                var templateData = getTemplateContent(templateKey);
+
+                // Đổ dữ liệu vào form modal
+                $('#createNotificationModal input[name="title"]').val(templateData.title);
+                $('#createNotificationModal textarea[name="content"]').val(templateData.content);
+
+                // Hiển thị modal nếu chưa mở
+                if (!$('#createNotificationModal').hasClass('show')) {
+                    $('#createNotificationModal').modal('show');
+                }
+            });
+
+            // --- 3. Xử lý logic ẨN/HIỆN GỬI ĐẾN VÀ LÊN LỊCH ---
+
+            // A. Xử lý Chọn Đối Tượng Gửi (Theo lớp / Cá nhân)
+            $('#recipientTargetSelect').change(function() {
+                handleRecipientTargetChange($(this).val());
+            });
+
+            // B. Xử lý Lên lịch Gửi (Schedule)
+            $('select[name="sendTime"]').change(function() {
+                if ($(this).val() === 'schedule') {
+                    $('#scheduleDateTime').removeClass('d-none').find('input').prop('required', true);
+                } else {
+                    $('#scheduleDateTime').addClass('d-none').find('input').prop('required', false);
+                }
+            });
+
+            // --- 4. Xử lý chức năng Tạo Mới (Gửi Form bằng AJAX) ---
+            $('.modal-footer .btn-primary:contains("Gửi Thông Báo")').click(function (e) {
+                e.preventDefault();
+
+                // Kiểm tra form validation
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+
+                var formData = form.serializeArray();
+                var sendEmailChecked = $('#sendEmail').is(':checked');
+
+                // Đảm bảo gửi giá trị 'false' nếu checkbox không được chọn
+                if (!sendEmailChecked) {
+                    // Loại bỏ giá trị cũ nếu có
+                    formData = formData.filter(item => item.name !== 'sendEmail');
+                    // Thêm giá trị mới
+                    formData.push({ name: 'sendEmail', value: 'false' });
+                }
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        alert("Thông báo đã được gửi thành công!");
+                        $('#createNotificationModal').modal('hide');
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMessage = "Đã xảy ra lỗi khi gửi thông báo.";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage += "\n" + xhr.responseJSON.message;
+                        }
+                        alert(errorMessage);
+                        console.error("AJAX Error:", status, error, xhr.responseText);
+                    }
+                });
+            });
+
+            // --- 5. Xử lý chức năng Xuất Excel ---
+            $('.header-actions .btn-success:contains("Xuất Excel")').click(function() {
+                window.location.href = exportUrl;
+            });
+
+            // --- 6. Xử lý chức năng Lịch Sử (Hiển thị Modal Lịch Sử) ---
+            $('.header-actions .btn-info:contains("Lịch Sử")').click(function() {
+                $.ajax({
+                    url: historyUrl,
+                    type: 'GET',
+                    dataType: 'json', // Đảm bảo nhận JSON
+                    beforeSend: function() {
+                        $('#historyModalBody').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</p>');
+                        $('#historyModal').modal('show');
+                    },
+                    success: function(historyData) {
+                        // Sử dụng hàm renderHistory để tạo HTML từ JSON
+                        const htmlContent = renderHistory(historyData);
+                        $('#historyModalBody').html(htmlContent);
+                    },
+                    error: function(xhr, status, error) {
+                        $('#historyModalBody').html('<p class="text-danger text-center"><i class="fas fa-exclamation-triangle"></i> Lỗi: Không thể tải lịch sử hoạt động. Vui lòng kiểm tra console.</p>');
+                        console.error("Lỗi AJAX tải lịch sử:", xhr.responseText);
+                    }
+                });
+            });
+
+            // Khôi phục thuộc tính name và required ban đầu khi modal bị đóng (phòng trường hợp form bị gửi lại)
+            $('#createNotificationModal').on('hidden.bs.modal', function () {
+                // Đặt lại trạng thái ban đầu (ví dụ: gửi đến 'all')
+                handleRecipientTargetChange($('#recipientTargetSelect').val());
+            });
+            // --- 7. Xử lý chức năng Lọc và Sắp xếp ---
+            // Lấy trạng thái ban đầu
+            let currentFilterDate = '@ViewBag.CurrentFilterDate';
+            let currentSortBy = '@ViewBag.CurrentSortBy';
+
+            // Hàm điều hướng chung để duy trì trạng thái lọc và sắp xếp
+            function updateNotificationsList(newFilterDate, newSortBy) {
+                const newUrl = '@Url.Action("Notifications", "Admin")' +
+                               `?filterDate=${newFilterDate}&sortBy=${newSortBy}`;
+                window.location.href = newUrl;
+            }
+
+            // Lắng nghe sự kiện lọc và sắp xếp
+            $('#filterDate').on('change', function() {
+                const newFilter = $(this).val();
+                currentFilterDate = newFilter; // Cập nhật biến trạng thái
+                updateNotificationsList(newFilter, currentSortBy);
+            });
+
+            $('#sortBy').on('change', function() {
+                const newSort = $(this).val();
+                currentSortBy = newSort; // Cập nhật biến trạng thái
+                updateNotificationsList(currentFilterDate, newSort);
+            });
+            // --- 8. Xử lý chức năng Xem Chi Tiết Thông Báo ---
+            $(document).on('click', '.btn-detail', function(e) {
+
+                const notificationId = $(this).data('id');
+                const $modal = $(detailModalId);
+                const $modalTitle = $modal.find('#detailNotificationModalLabel');
+                const $modalBody = $modal.find('#detailModalBodyContent');
+
+                // 1. Reset trạng thái Loading
+                $modalTitle.html(`<i class="fas fa-eye"></i> Chi Tiết Thông Báo ID: ${notificationId}`);
+                $modalBody.html('<p class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i><br> Đang tải chi tiết thông báo...</p>');
+
+                // 2. Gọi AJAX để lấy dữ liệu chi tiết
+                $.ajax({
+                    url: detailUrl + notificationId,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+
+                        // 3. Tạo HTML và điền vào Modal Body
+                        const detailHtml = createDetailHtml(data);
+                        $modalBody.html(detailHtml);
+
+                        // Cập nhật tiêu đề cuối cùng sau khi tải thành công
+                        $modalTitle.html(`<i class="fas fa-eye"></i> Chi Tiết Thông Báo ID: ${data.id} - ${data.title}`);
+
+                    },
+                    error: function(xhr, status, error) {
+                        $modalTitle.html('<i class="fas fa-exclamation-triangle"></i> Lỗi Tải Chi Tiết');
+                        const errorMessage = xhr.responseJSON?.message || 'Lỗi kết nối. Vui lòng kiểm tra lại.';
+                        $modalBody.html('<p class="text-danger text-center p-5"><i class="fas fa-exclamation-triangle fa-2x"></i><br>' + errorMessage + '</p>');
+                        console.error("Lỗi AJAX tải chi tiết:", xhr.responseText);
+                    }
+                });
+            });
+            // --- 9. Xử lý chức năng XÓA THÔNG BÁO ---
+            const deleteUrl = '@Url.Action("Delete", "Admin")';
+
+            $(document).on('click', '.notification-card .btn-danger[title="Xóa"]', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const notificationId = $(this).closest('.notification-card').find('.btn-detail').data('id');
+                const $card = $(this).closest('.notification-card');
+                if (confirm(`Bạn có chắc chắn muốn xóa thông báo ID ${notificationId} không? Hành động này không thể hoàn tác.`)) {
+                    $.ajax({
+                        url: deleteUrl,
+                        type: 'POST',
+                        data: { id: notificationId }, // Gửi ID thông báo
+                        headers: {
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() // Gửi Anti-Forgery Token
+                        },
+                        success: function(response) {
+                            alert(response.message);
+
+                            // Xóa thẻ thông báo khỏi DOM và tải lại trang để cập nhật thống kê
+                            $card.fadeOut(300, function() {
+                                $(this).remove();
+                                // Tải lại trang để cập nhật thống kê và danh sách
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            const errorMessage = xhr.responseJSON?.message || "Lỗi xóa thông báo. Vui lòng kiểm tra lại.";
+                            alert("Lỗi: " + errorMessage);
+                            console.error("Lỗi AJAX xóa:", xhr.responseText);
+                        }
+                    });
+                }
+            });
+            // --- 10. Xử lý chức năng CHỈNH SỬA THÔNG BÁO ---
+            const editBaseUrl = '@Url.Action("Edit", "Admin")';
+            const detailUrl = '@Url.Action("GetNotificationDetail", "Admin")/';
+
+            // 1. Xử lý sự kiện nhấn nút "Chỉnh sửa"
+            $(document).on('click', '.notification-card .btn-primary[title="Chỉnh sửa"]', function(e) {
+                e.preventDefault();
+                const notificationId = $(this).closest('.notification-card').find('.btn-detail').data('id');
+                const $modal = $('#editNotificationModal');
+                const $form = $('#editNotificationForm');
+
+                // 1.1. Reset và Hiển thị trạng thái tải
+                $('#editNotificationIdDisplay').text('');
+                $('#editTitle').val('Đang tải...');
+                $('#editContent').val('Đang tải dữ liệu...');
+
+                // Lưu ID vào hidden field và cập nhật tiêu đề modal
+                $('#editNotificationId').val(notificationId);
+                $('#editNotificationModalLabel').html(`<i class="fas fa-edit"></i> Chỉnh Sửa Thông Báo ID: ${notificationId}`);
+
+                $modal.modal('show');
+
+                // 1.2. Gọi AJAX để lấy dữ liệu chi tiết
+                $.ajax({
+                    url: detailUrl + notificationId, // Sử dụng Action GetNotificationDetail đã có
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        // Đổ dữ liệu vào form
+                        $('#editTitle').val(data.title);
+                        $('#editContent').val(data.content);
+                        $('#editNotificationId').val(notificationId);
+                        $form.attr('action', editBaseUrl);
+
+                        // Xử lý Thời gian gửi
+                        const createdDate = new Date(data.scheduleDate.split('/').reverse().join('-') + ' ' + data.scheduleTime);
+                        const isScheduled = createdDate > new Date();
+                        const creator = data.recipientGroup.replace('Được tạo bởi: ', '').trim();
+                        $('#editCreatorNameInput').val(creator);
+
+                        if (isScheduled) {
+                            $('#editSendTimeSelect').val('schedule');
+                            $('#editScheduleDateTime').removeClass('d-none').find('input').prop('required', true);
+
+                            // Chuyển đổi DateTime sang định dạng datetime-local (YYYY-MM-DDTHH:MM)
+                            const localISO = new Date(createdDate.getTime() - (createdDate.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                            $('#editScheduleDate').val(localISO);
+                        } else {
+                            $('#editSendTimeSelect').val('now');
+                            $('#editScheduleDateTime').addClass('d-none').find('input').prop('required', false);
+                        }
+
+                        // Giả định: Ta sẽ chỉ điền vào trường 'individual' nếu không phải là nhóm chung
+                        $('#editRecipientTargetSelect').val('individual');
+                        handleEditRecipientTargetChange('individual');
+
+                        // Do không có thông tin target chính xác (class code, individual user), ta chỉ có thể
+                        // điền tên người tạo vào trường cá nhân để tượng trưng.
+                        $('#editIndividualSelect').val(data.recipientGroup);
+
+                        // Cập nhật tiêu đề cuối cùng sau khi tải thành công
+                        $('#editNotificationIdDisplay').text(`(${data.title})`);
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Lỗi tải chi tiết thông báo: " + (xhr.responseJSON?.message || 'Không thể kết nối.'));
+                        $modal.modal('hide');
+                    }
+                });
+            });
+
+            // 2. Xử lý sự kiện nhấn nút "Lưu Chỉnh Sửa"
+            $('#saveEditButton').click(function(e) {
+                e.preventDefault();
+                const $form = $('#editNotificationForm');
+                const notificationId = $('#editNotificationId').val();
+
+                // Kiểm tra validation
+                if (!$form[0].checkValidity()) {
+                    $form[0].reportValidity();
+                    return;
+                }
+
+                // Bắt đầu gọi AJAX POST
+                $.ajax({
+                    url: $form.attr('action'), // Lấy URL đã được set trong bước tải
+                    type: 'POST',
+                    data: $form.serialize(), // Gửi tất cả dữ liệu form, bao gồm ID và Anti-Forgery Token
+                    success: function(response) {
+                        alert(response.message);
+                        $('#editNotificationModal').modal('hide');
+                        // Tải lại trang để thấy kết quả cập nhật và thống kê mới
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        const errorMessage = xhr.responseJSON?.message || "Lỗi khi lưu chỉnh sửa.";
+                        alert("Lỗi: " + errorMessage);
+                        console.error("AJAX Edit Error:", xhr.responseText);
+                    }
+                });
+            });
+            // Thêm logic ẩn/hiện lịch gửi cho Edit Modal
+            $('#editSendTimeSelect').change(function() {
+                if ($(this).val() === 'schedule') {
+                    $('#editScheduleDateTime').removeClass('d-none').find('input').prop('required', true);
+                } else {
+                    $('#editScheduleDateTime').addClass('d-none').find('input').prop('required', false);
+                }
+            });
+
+            // Bổ sung xử lý ẩn/hiện cho Select Target trong Edit Modal
+            $('#editRecipientTargetSelect').change(function() {
+                handleEditRecipientTargetChange($(this).val());
+            });
+            // --- 11. Xử lý chức năng GỬI LẠI THÔNG BÁO ---
+            $(document).on('click', '.notification-card .btn-success[title="Gửi lại"]', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const notificationId = $(this).data('id');
+                const $card = $(this).closest('.notification-card');
+
+                if (confirm(`Bạn có chắc chắn muốn GỬI LẠI thông báo ID ${notificationId} này không? Một bản ghi mới sẽ được tạo.`)) {
+                    $.ajax({
+                        url: resendUrl,
+                        type: 'POST',
+                        data: { id: notificationId }, // Gửi ID thông báo gốc
+                        headers: {
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() // Gửi Anti-Forgery Token
+                        },
+                        success: function(response) {
+                            alert(response.message);
+
+                            // Tải lại trang để thấy thông báo mới được tạo
+                            window.location.reload();
+                        },
+                        error: function(xhr) {
+                            const errorMessage = xhr.responseJSON?.message || "Lỗi gửi lại thông báo. Vui lòng kiểm tra lại.";
+                            alert("Lỗi: " + errorMessage);
+                            console.error("Lỗi AJAX Gửi lại:", xhr.responseText);
+                        }
+                    });
+                }
             });
         });
     </script>

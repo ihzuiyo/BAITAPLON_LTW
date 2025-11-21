@@ -9,12 +9,16 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
             <i class="fas fa-plus-circle"></i> Tạo Báo Cáo Mới
         </button>
-        <button class="btn btn-success">
-            <i class="fas fa-file-excel"></i> Xuất Excel
-        </button>
-        <button class="btn btn-danger">
-            <i class="fas fa-file-pdf"></i> Xuất PDF
-        </button>
+        <form asp-action="ExportReportsExcel" asp-controller="Admin" method="post" class="d-inline">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+        </form>
+        <form asp-action="ExportReportsPdf" asp-controller="Admin" method="post" class="d-inline">
+            <button type="submit" class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+        </form>
     </div>
 </div>
 
@@ -347,37 +351,37 @@
 <div class="modal fade" id="generateReportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-file-alt"></i> Tạo Báo Cáo Mới</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form>
+            <form id="generateReportForm" method="post">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-alt"></i> Tạo Báo Cáo Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Loại Báo Cáo</label>
-                        <select class="form-select">
-                            <option>Báo cáo ghi danh</option>
-                            <option>Báo cáo tài chính</option>
-                            <option>Báo cáo kết quả học tập</option>
-                            <option>Báo cáo tổng hợp</option>
+                        <label for="reportType" class="form-label">Loại Báo Cáo</label>
+                        <select class="form-select" id="reportType" name="reportType">
+                            <option value="enrollment">Báo cáo ghi danh</option>
+                            <option value="finance">Báo cáo tài chính</option>
+                            <option value="performance">Báo cáo kết quả học tập</option>
+                            <option value="summary" selected>Báo cáo tổng hợp</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Khoảng Thời Gian</label>
-                        <select class="form-select">
-                            <option>Tháng này</option>
-                            <option>Tháng trước</option>
-                            <option>Quý này</option>
-                            <option>Năm nay</option>
-                            <option>Tùy chỉnh</option>
+                        <label for="reportPeriod" class="form-label">Khoảng Thời Gian</label>
+                        <select class="form-select" id="reportPeriod" name="reportPeriod">
+                            <option value="current_month" selected>Tháng này</option>
+                            <option value="last_month">Tháng trước</option>
+                            <option value="current_quarter">Quý này</option>
+                            <option value="current_year">Năm nay</option>
+                            <option value="custom">Tùy chỉnh</option>
                         </select>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary">Tạo Báo Cáo</button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="submitGenerateReportBtn">Tạo Báo Cáo</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -584,39 +588,203 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Sample chart initialization (you can replace with real data)
         $(document).ready(function() {
-            // Enrollment Trend Chart
-            const enrollmentCtx = document.getElementById('enrollmentTrendChart');
-            if (enrollmentCtx) {
-                new Chart(enrollmentCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
-                        datasets: [{
-                            label: 'Số sinh viên ghi danh',
-                            data: [45, 52, 68, 72, 85, 92],
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.4
-                        }]
+            let enrollmentTrendData = null;
+            let courseDistributionData = null;
+
+            const loadEnrollmentTrendChart = () => {
+                $.ajax({
+                    url: '@Url.Action("GetEnrollmentTrendData", "Admin")',
+                    type: 'GET',
+                    success: function(response) {
+                        enrollmentTrendData = response; 
+                        const enrollmentCtx = document.getElementById('enrollmentTrendChart');
+                        if (enrollmentCtx) {
+                            new Chart(enrollmentCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: response.map(item => item.label),
+                                    datasets: [{
+                                        label: 'Số sinh viên ghi danh',
+                                        data: response.map(item => item.data),
+                                        borderColor: 'rgb(75, 192, 192)',
+                                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                        tension: 0.4,
+                                        fill: true
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: { beginAtZero: true, title: { display: true, text: 'Số lượng sinh viên' } }
+                                    }
+                                }
+                            });
+                        }
                     }
                 });
-            }
-            
-            // Course Pie Chart
-            const courseCtx = document.getElementById('coursePieChart');
-            if (courseCtx) {
-                new Chart(courseCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Python AI', 'Web API', 'ReactJS', 'SQL', 'C#'],
-                        datasets: [{
-                            data: [85, 72, 65, 48, 42],
-                            backgroundColor: ['#667eea', '#11998e', '#fc4a1a', '#4facfe', '#f093fb']
-                        }]
+            };
+
+            const loadCourseDistributionChart = () => {
+                $.ajax({
+                    url: '@Url.Action("GetCourseDistributionData", "Admin")',
+                    type: 'GET',
+                    success: function(response) {
+                        courseDistributionData = response; 
+                        const courseCtx = document.getElementById('coursePieChart');
+                        if (courseCtx) {
+                            new Chart(courseCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: response.labels,
+                                    datasets: [{
+                                        data: response.data,
+                                        backgroundColor: ['#667eea', '#11998e', '#fc4a1a', '#4facfe', '#f093fb', '#A1B56F'],
+                                        hoverOffset: 4
+                                    }]
+                                }
+                            });
+                        }
                     }
                 });
-            }
+            };
+
+            loadEnrollmentTrendChart();
+            loadCourseDistributionChart();
+
+            $('#enrollment-tab').on('shown.bs.tab', function (e) {
+                if (window.enrollmentBarChartInstance) {
+                    return;
+                }
+
+                const dataToUse = enrollmentTrendData || { labels: [], data: [] };
+
+                const barCtx = document.getElementById('enrollmentBarChart');
+                if (barCtx) {
+                    window.enrollmentBarChartInstance = new Chart(barCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: dataToUse.map(item => item.label),
+                            datasets: [{
+                                label: 'Số Sinh Viên Ghi Danh Mới',
+                                data: dataToUse.map(item => item.data),
+                                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                                borderColor: 'rgb(54, 162, 235)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, title: { display: true, text: 'Số lượng' } }
+                            }
+                        }
+                    });
+                }
+            });
+
+            $('#finance-tab').on('shown.bs.tab', function (e) {
+                if (window.financeLineChartInstance) {
+                    return;
+                }
+
+                const financeCtx = document.getElementById('financeLineChart');
+                if (financeCtx) {
+                    window.financeLineChartInstance = new Chart(financeCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+                            datasets: [
+                                {
+                                    label: 'Doanh Thu Thu Được (VNĐ)',
+                                    data: [35200000, 40500000, 45200000, 48000000, 52100000, 55700000],
+                                    borderColor: '#11998e',
+                                    backgroundColor: 'rgba(17, 153, 142, 0.3)',
+                                    tension: 0.4,
+                                    fill: true
+                                },
+                                {
+                                    label: 'Chi Phí (VNĐ)',
+                                    data: [10000000, 11000000, 12800000, 11500000, 13000000, 14500000],
+                                    borderColor: '#fc4a1a',
+                                    backgroundColor: 'rgba(252, 74, 26, 0.3)',
+                                    tension: 0.4,
+                                    fill: true
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Số tiền (VNĐ)' },
+                                    ticks: {
+                                        callback: function(value, index, values) {
+                                            return value.toLocaleString('vi-VN');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            $('#performance-tab').on('shown.bs.tab', function (e) {
+                if (window.performanceChartInstance) {
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("GetScoreDistributionData", "Admin")',
+                    type: 'GET',
+                    success: function(response) {
+                        const performanceCtx = document.getElementById('performanceChart');
+                        if (performanceCtx) {
+                            window.performanceChartInstance = new Chart(performanceCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: response.labels,
+                                    datasets: [{
+                                        label: 'Số Sinh Viên',
+                                        data: response.data,
+                                        backgroundColor: response.backgroundColor,
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: { beginAtZero: true, title: { display: true, text: 'Số lượng sinh viên' } }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+            // Xử lý sự kiện khi Modal được gửi
+            $('#generateReportForm').submit(function(e) {
+                e.preventDefault();
+
+                const reportType = $('#reportType').val();
+                const reportPeriod = $('#reportPeriod').val();
+
+                // 1. Thiết lập URL đích
+                const actionUrl = '@Url.Action("GenerateCustomReport", "Admin")';
+
+                // Thiết lập action và gửi form
+                $(this).attr('action', actionUrl);
+
+                this.submit();
+
+                $('#generateReportModal').modal('hide');
+            });
         });
     </script>
 }

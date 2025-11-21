@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using StudentManagement.Models;
-using StudentManagement.Attributes;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using StudentManagement.Attributes;
+using StudentManagement.Models;
 using StudentManagement.Models.ViewModels;
+using System.Globalization;
 namespace StudentManagement.Controllers
 
 {
@@ -12,10 +14,12 @@ namespace StudentManagement.Controllers
     public class AdminController : Controller
     {
         private readonly QlsvTrungTamTinHocContext _context;
-
-        public AdminController(QlsvTrungTamTinHocContext context)
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        public AdminController(QlsvTrungTamTinHocContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -858,33 +862,1104 @@ namespace StudentManagement.Controllers
         }
 
         // Tuitions Management
-        public async Task<IActionResult> Tuitions()
+        
+        // 1. Action: Hiển thị trang Quản Lý Học Phí (Index)
+        public async Task<IActionResult> Tuitions(
+            string search,
+            string filterStatus,
+            int? filterMonth,
+            string sortBy = "newest",
+            int entriesPerPage = 10,
+            int pageNumber = 1)
         {
-            var tuitions = await _context.Tuitions
-                .Include(t => t.Enrollment)           // 1. Tải Ghi danh (Enrollment)
-                    .ThenInclude(e => e.Student)    // 2. TỪ Ghi danh -> Tải Sinh viên (Student)
-                .Include(t => t.Enrollment)           // 1. Tải Ghi danh (Enrollment)
-                    .ThenInclude(e => e.Class)      // 3. TỪ Ghi danh -> Tải Lớp học (Class)
-                        .ThenInclude(c => c.Course) // 4. TỪ Lớp học -> Tải Khóa học (Course)
+            // Lấy ngày hiện tại CHỈ MỘT LẦN ở C# (Server-side)
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            // 1. Khởi tạo truy vấn và Eager loading
+            IQueryable<Tuition> tuitionsQuery = _context.Tuitions
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Class)
+                        .ThenInclude(c => c.Course);
+
+            // 2. Lọc theo Tìm kiếm (Search)
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                tuitionsQuery = tuitionsQuery.Where(t =>
+                    t.Enrollment.Student.FullName.ToLower().Contains(searchLower) ||
+                    t.Enrollment.Student.StudentCode.ToLower().Contains(searchLower) ||
+                    t.Enrollment.Class.ClassName.ToLower().Contains(searchLower));
+            }
+
+            // 3. Lọc theo Trạng thái (Status)
+            if (!string.IsNullOrEmpty(filterStatus))
+            {
+                if (filterStatus == "Overdue")
+                {
+                    tuitionsQuery = tuitionsQuery.Where(t =>
+                        t.TotalFee > t.AmountPaid &&
+                        t.DueDate.HasValue &&
+                        t.DueDate.Value < today); 
+                }
+                else if (filterStatus == "Pending")
+                {
+                    tuitionsQuery = tuitionsQuery.Where(t =>
+                        t.TotalFee > t.AmountPaid &&
+                        t.Status == "Pending");
+                }
+                else 
+                {
+                    tuitionsQuery = tuitionsQuery.Where(t => t.Status == filterStatus);
+                }
+            }
+
+            // 4. Lọc theo Tháng (Tháng của Hạn Đóng)
+            if (filterMonth.HasValue && filterMonth.Value >= 1 && filterMonth.Value <= 12)
+            {
+                tuitionsQuery = tuitionsQuery.Where(t =>
+                    t.DueDate.HasValue && t.DueDate.Value.Month == filterMonth.Value);
+            }
+
+            // 5. Sắp xếp (SortBy)
+            tuitionsQuery = sortBy switch
+            {
+                "overdue" => tuitionsQuery
+                    .OrderByDescending(t =>
+                        t.TotalFee > t.AmountPaid &&
+                        t.DueDate.HasValue &&
+                        t.DueDate.Value < today)
+                    .ThenBy(t => t.DueDate),
+
+                "oldest" => tuitionsQuery.OrderBy(t => t.TuitionId),
+                "amount_desc" => tuitionsQuery.OrderByDescending(t => t.TotalFee),
+                "amount_asc" => tuitionsQuery.OrderBy(t => t.TotalFee),
+                _ => tuitionsQuery.OrderByDescending(t => t.TuitionId),
+            };
+
+            int totalCount = await tuitionsQuery.CountAsync();
+
+            int skipAmount = (pageNumber - 1) * entriesPerPage;
+
+            var tuitions = await tuitionsQuery
+                .Skip(skipAmount) 
+                .Take(entriesPerPage) 
                 .ToListAsync();
+
+            ViewData["CurrentSearch"] = search;
+            ViewData["CurrentStatus"] = filterStatus;
+            ViewData["CurrentMonth"] = filterMonth;
+            ViewData["CurrentSort"] = sortBy;
+            ViewData["CurrentEntries"] = entriesPerPage;
+            ViewData["CurrentPage"] = pageNumber;
+            ViewData["TotalCount"] = totalCount; 
 
             return View(tuitions);
         }
 
-        // Notifications
-        public async Task<IActionResult> Notifications()
+        // 2. Action: Xuất Excel (Xuất Excel)
+        // Tương ứng với nút "Xuất Excel"
+        [HttpPost]
+        public async Task<IActionResult> ExportExcelTuition()
         {
+            var tuitions = await _context.Tuitions
+                .Include(t => t.Enrollment)
+                .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                .ThenInclude(e => e.Class)
+                .ThenInclude(c => c.Course)
+                .ToListAsync();
+
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("DanhSachHocPhi");
+
+                // Header
+                worksheet.Cells[1, 1].Value = "ID";
+                worksheet.Cells[1, 2].Value = "Mã SV";
+                worksheet.Cells[1, 3].Value = "Tên Sinh Viên";
+                worksheet.Cells[1, 4].Value = "Lớp Học";
+                worksheet.Cells[1, 5].Value = "Khóa Học";
+                worksheet.Cells[1, 6].Value = "Tổng Học Phí (VNĐ)";
+                worksheet.Cells[1, 7].Value = "Đã Đóng (VNĐ)";
+                worksheet.Cells[1, 8].Value = "Còn Lại (VNĐ)";
+                worksheet.Cells[1, 9].Value = "Hạn Đóng";
+                worksheet.Cells[1, 10].Value = "Trạng Thái";
+                worksheet.Cells[1, 1, 1, 10].Style.Font.Bold = true;
+
+                // Data
+                for (int i = 0; i < tuitions.Count; i++)
+                {
+                    var tuition = tuitions[i];
+                    var row = i + 2;
+                    var remaining = tuition.TotalFee - tuition.AmountPaid;
+
+                    worksheet.Cells[row, 1].Value = tuition.TuitionId;
+                    worksheet.Cells[row, 2].Value = tuition.Enrollment.Student.StudentCode;
+                    worksheet.Cells[row, 3].Value = tuition.Enrollment.Student.FullName;
+                    worksheet.Cells[row, 4].Value = tuition.Enrollment.Class.ClassName;
+                    worksheet.Cells[row, 5].Value = tuition.Enrollment.Class.Course.CourseName;
+                    worksheet.Cells[row, 6].Value = tuition.TotalFee;
+                    worksheet.Cells[row, 7].Value = tuition.AmountPaid;
+                    worksheet.Cells[row, 8].Value = remaining;
+                    worksheet.Cells[row, 9].Value = tuition.DueDate?.ToString("dd/MM/yyyy");
+                    worksheet.Cells[row, 10].Value = tuition.Status switch
+                    {
+                        "Paid" => "Đã thanh toán",
+                        "Pending" => "Chưa thanh toán",
+                        "Overdue" => "Quá hạn",
+                        _ => "Không xác định"
+                    };
+                }
+
+                worksheet.Cells.AutoFitColumns(); 
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+                stream.Position = 0;
+
+                string excelName = $"DanhSachHocPhi_{DateTime.Now.ToString("yyyyMMddHHmmss")}.xlsx";
+                return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
+            }
+        }
+
+        public IActionResult PrintReport()
+        {
+            return RedirectToAction(nameof(Index)); 
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordPayment(int tuitionId, decimal amountPaid, DateTime paymentDate, string note)
+        {
+            var tuition = await _context.Tuitions
+                                        .FirstOrDefaultAsync(t => t.TuitionId == tuitionId);
+
+            if (tuition == null)
+            {
+                return NotFound();
+            }
+
+            if (amountPaid <= 0)
+            {
+                TempData["ErrorMessage"] = "Số tiền thu phải lớn hơn 0.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Cập nhật số tiền đã đóng
+            tuition.AmountPaid += amountPaid;
+
+            // Cập nhật trạng thái
+            if (tuition.AmountPaid >= tuition.TotalFee)
+            {
+                tuition.Status = "Paid";
+                tuition.AmountPaid = tuition.TotalFee; 
+            }
+            else
+            {
+                tuition.Status = "Pending"; 
+            }
+            
+            int cashierId = GetCurrentUserId();
+            DateTime currentTime = DateTime.Now;
+            var newReceipt = new Receipt 
+            {
+                TuitionId = tuitionId,
+                Amount = amountPaid, 
+                PaymentDate = paymentDate,
+                Note = note,
+                CashierId = cashierId,
+                ReceiptCode = $"RC{currentTime.ToString("yyMMdd")}-{tuitionId}-{currentTime.ToString("HHmmssfff")}"
+            };
+
+            _context.Receipts.Add(newReceipt);
+
+            try
+            {
+                _context.Update(tuition);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Ghi nhận thanh toán thành công.";
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi lưu thanh toán. Vui lòng thử lại.";
+            }
+
+            return RedirectToAction(nameof(Tuitions));
+        }
+
+        // Action AJAX/API để lấy thông tin học phí khi chọn sinh viên trong modal
+        [HttpGet]
+        public async Task<IActionResult> GetTuitionDetails(int tuitionId)
+        {
+            var tuition = await _context.Tuitions
+                .Include(t => t.Enrollment)
+                .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                .ThenInclude(e => e.Class)
+                .FirstOrDefaultAsync(t => t.TuitionId == tuitionId);
+
+            if (tuition == null)
+            {
+                return NotFound();
+            }
+
+            var remaining = tuition.TotalFee - tuition.AmountPaid;
+
+            return Json(new
+            {
+                className = tuition.Enrollment.Class.ClassName,
+                // SỬA: Thay đổi các trường TotalFee/AmountPaid/Remaining thành giá trị số (decimal)
+                totalFeeDecimal = tuition.TotalFee,
+                amountPaidDecimal = tuition.AmountPaid,
+                remainingDecimal = remaining,
+
+                // Giữ lại các trường string đã format nếu muốn dùng cho mục đích hiển thị khác
+                totalFee = tuition.TotalFee.ToString("N0"),
+                amountPaid = tuition.AmountPaid.ToString("N0"),
+                remaining = remaining.ToString("N0"),
+            });
+        }
+        // 5. Action AJAX/API để lấy lịch sử thanh toán (Receipts)
+        [HttpGet]
+        public async Task<IActionResult> GetPaymentHistory(int tuitionId)
+        {
+            // Lấy tất cả các biên lai liên quan đến TuitionId này
+            var receipts = await _context.Receipts
+                .Include(r => r.Cashier) // Cashier là User đã thu tiền
+                .Where(r => r.TuitionId == tuitionId)
+                .OrderByDescending(r => r.PaymentDate) // Biên lai mới nhất lên trước
+                .ToListAsync();
+
+            if (!receipts.Any())
+            {
+                return Json(new { success = false, message = "Không tìm thấy lịch sử thanh toán." });
+            }
+
+            // Định dạng dữ liệu để gửi về View/Client
+            var historyData = receipts.Select(r => new
+            {
+                receiptCode = r.ReceiptCode,
+                amount = r.Amount.ToString("N0"),
+                paymentDate = r.PaymentDate.ToString("dd/MM/yyyy HH:mm"),
+                cashierName = r.Cashier.FullName ?? r.Cashier.Username, // Hiển thị tên người thu tiền
+                note = r.Note
+            }).ToList();
+
+            return Json(new { success = true, history = historyData });
+        }
+
+        // Notifications
+        public async Task<IActionResult> Notifications(string filterDate, string sortBy)
+        {
+            // 1. Khởi tạo truy vấn IQueryable
+            IQueryable<Notification> query = _context.Notifications
+                .Include(n => n.Creator)
+                .Include(n => n.NotificationRecipients);
+            // 2. LỌC THEO THỜI GIAN
+            query = ApplyTimeFilter(query, filterDate);
+
+            // 3. SẮP XẾP
+            query = ApplySortOrder(query, sortBy);
+
+            // 4. Thực thi truy vấn và trả về kết quả
+            var notifications = await query.ToListAsync();
+
+            // 5. CẬP NHẬT VIEW BAG (Quan trọng để giữ trạng thái trên View và tính lại Stats)
+            ViewBag.CurrentFilterDate = filterDate ?? "all";
+            ViewBag.CurrentSortBy = sortBy ?? "newest";
+
+            // Tính toán thống kê dựa trên dữ liệu đã được lọc (notifications)
+            ViewBag.TotalNotifications = notifications.Count();
+            ViewBag.TodayNotifications = notifications.Count(n => n.CreatedDate.Date == DateTime.Today);
+            ViewBag.TotalRecipients = notifications.Sum(n => n.NotificationRecipients.Count);
+            ViewBag.TotalRead = notifications.Sum(n => n.NotificationRecipients.Count(r => r.IsRead));
+
+            return View(notifications);
+        }
+        
+        // POST: /Notification/Create (Đã sửa lỗi UserId và sử dụng RecipientId)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(string title, string content, string recipientTarget, string sendTime, DateTime? scheduleDateTime, bool sendEmail)
+        {
+            // [GIẢ ĐỊNH] Lấy ID người dùng hiện tại
+            int creatorId = GetCurrentUserId();
+
+            // 1. Tạo đối tượng Notification
+            var newNotification = new Notification
+            {
+                Title = title,
+                Content = content,
+                CreatedDate = sendTime == "schedule" && scheduleDateTime.HasValue ? scheduleDateTime.Value : DateTime.Now,
+                CreatorId = creatorId,
+            };
+
+            _context.Add(newNotification);
+            await _context.SaveChangesAsync();
+
+            // 2. Xử lý logic người nhận (Sử dụng RecipientId giả định)
+            var recipientIds = GetRecipientUserIds(recipientTarget);
+
+            foreach (var userId in recipientIds)
+            {
+                newNotification.NotificationRecipients.Add(new NotificationRecipient
+                {
+                    NotificationId = newNotification.NotificationId,
+                    RecipientId = userId,
+                    IsRead = false
+                });
+            }
+
+            // Ghi tất cả người nhận một lần duy nhất (đã sửa lỗi hiệu suất)
+            await _context.SaveChangesAsync();
+            string logDetails = $"Thông báo ID {newNotification.NotificationId} ({newNotification.Title}). Gửi đến: {recipientTarget}";
+            await LogAction("Tạo thông báo", logDetails, creatorId);
+
+            TempData["SuccessMessage"] = "Thông báo đã được tạo và gửi thành công!";
+            return Ok(new { success = true, message = "Tạo thông báo thành công." });
+        }
+        // POST: /Notification/Edit/5
+        // POST: /Notification/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, string title, string content,
+                                              string recipientTarget, string sendTime,
+                                              DateTime? scheduleDateTime)
+        {
+            var notification = await _context.Notifications
+                .Include(n => n.NotificationRecipients) // Phải Include người nhận để xóa
+                .FirstOrDefaultAsync(n => n.NotificationId == id);
+
+            if (notification == null)
+            {
+                return NotFound(new { success = false, message = $"Không tìm thấy thông báo ID {id}." });
+            }
+
+            int editorId = GetCurrentUserId();
+
+            // 1. Cập nhật các trường cơ bản và Thời gian gửi
+            notification.Title = title;
+            notification.Content = content;
+
+            // Xử lý thời gian gửi: Tương tự như Create
+            notification.CreatedDate = sendTime == "schedule" && scheduleDateTime.HasValue
+                                       ? scheduleDateTime.Value
+                                       : DateTime.Now;
+
+            // 2. Cập nhật Người nhận
+
+            // a. Xóa tất cả người nhận cũ liên quan đến thông báo này (đã tải qua Include)
+            _context.NotificationRecipients.RemoveRange(notification.NotificationRecipients);
+
+            // b. Lấy danh sách ID người nhận mới
+            var recipientIds = GetRecipientUserIds(recipientTarget);
+
+            // c. Thêm người nhận mới
+            foreach (var userId in recipientIds)
+            {
+                notification.NotificationRecipients.Add(new NotificationRecipient
+                {
+                    NotificationId = notification.NotificationId,
+                    RecipientId = userId,
+                    IsRead = false // Đặt lại là chưa đọc khi gửi lại/chỉnh sửa
+                });
+            }
+
+            try
+            {
+                // 3. Lưu tất cả thay đổi (cập nhật Notification, xóa cũ, thêm mới NotificationRecipients)
+                _context.Update(notification);
+                await _context.SaveChangesAsync();
+
+                // GHI LOG HOẠT ĐỘNG
+                string logDetails = $"Thông báo ID {id} ({title}). Đã cập nhật tiêu đề, nội dung, người nhận và lịch gửi.";
+                await LogAction("Chỉnh sửa thông báo", logDetails, editorId);
+
+                return Ok(new { success = true, message = $"Thông báo ID {id} đã được cập nhật thành công." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Lỗi khi lưu chỉnh sửa.", error = ex.Message });
+            }
+        }
+
+        // GET: /Notification/ExportExcel
+        /// <summary>
+        /// Xử lý xuất file Excel, trả về file cho trình duyệt.
+        /// </summary>
+        public async Task<IActionResult> ExportExcelNotification()
+        {
+            // 1. Truy vấn Dữ liệu
             var notifications = await _context.Notifications
                 .Include(n => n.Creator)
+                .Include(n => n.NotificationRecipients)
                 .OrderByDescending(n => n.CreatedDate)
                 .ToListAsync();
-            return View(notifications);
+
+            // 2. Tạo File Excel
+            using (var package = new ExcelPackage())
+            {
+                // Tạo một Worksheet
+                var worksheet = package.Workbook.Worksheets.Add("Lịch Sử Thông Báo");
+
+                // 3. Viết Header
+                worksheet.Cells[1, 1].Value = "STT";
+                worksheet.Cells[1, 2].Value = "Tiêu Đề";
+                worksheet.Cells[1, 3].Value = "Nội Dung (Tóm tắt)";
+                worksheet.Cells[1, 4].Value = "Người Tạo";
+                worksheet.Cells[1, 5].Value = "Ngày Gửi";
+                worksheet.Cells[1, 6].Value = "Tổng Người Nhận";
+                worksheet.Cells[1, 7].Value = "Đã Đọc";
+                worksheet.Cells[1, 8].Value = "Tỷ Lệ Đọc";
+
+                // Định dạng Header
+                using (var range = worksheet.Cells["A1:H1"])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                    range.Style.Font.Color.SetColor(System.Drawing.Color.Black);
+                }
+
+                // 4. Viết Nội dung Dữ liệu
+                for (int i = 0; i < notifications.Count; i++)
+                {
+                    var n = notifications[i];
+                    int row = i + 2; // Bắt đầu từ hàng thứ 2
+
+                    var recipientCount = n.NotificationRecipients.Count;
+                    var readCount = n.NotificationRecipients.Count(r => r.IsRead);
+                    var readPercentage = recipientCount > 0 ? (readCount * 100.0 / recipientCount) : 0;
+                    var contentSummary = n.Content != null && n.Content.Length > 100
+                                         ? n.Content.Substring(0, 100) + "..." : n.Content;
+
+
+                    worksheet.Cells[row, 1].Value = i + 1;
+                    worksheet.Cells[row, 2].Value = n.Title;
+                    worksheet.Cells[row, 3].Value = contentSummary;
+                    worksheet.Cells[row, 4].Value = n.Creator?.FullName; // Sử dụng Safe Navigation (?)
+                    worksheet.Cells[row, 5].Value = n.CreatedDate.ToString("dd/MM/yyyy HH:mm");
+                    worksheet.Cells[row, 6].Value = recipientCount;
+                    worksheet.Cells[row, 7].Value = readCount;
+                    worksheet.Cells[row, 8].Value = readPercentage.ToString("F1") + "%";
+                }
+
+                // 5. Tự động điều chỉnh độ rộng cột
+                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+                // 6. Chuyển package thành mảng byte
+                var excelData = package.GetAsByteArray();
+
+                // 7. Trả về file cho trình duyệt tải về
+                return File(
+                    fileContents: excelData,
+                    contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileDownloadName: $"LichSuThongBao_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+                );
+            }
+        }
+        // GET: /Notification/History
+        /// <summary>
+        /// Trả về dữ liệu lịch sử hoạt động của người dùng (truy vấn từ ActionLogs).
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> History()
+        {
+            // Lấy ngày hôm nay để so sánh
+            var today = DateTime.Today;
+
+            // 1. Truy vấn DB: Lấy ActionLogs, tải kèm thông tin User (người thực hiện)
+            // Giới hạn số lượng (ví dụ: 50 bản ghi gần nhất)
+            var logEntries = await _context.ActionLogs
+                .Include(l => l.User) // Tải thông tin người dùng từ bảng Users
+                .Where(l => l.Action.Contains("Thông báo") ||
+                            l.Action.Contains("Tạo") ||
+                            l.Action.Contains("Sửa") ||
+                            l.Action.Contains("Xóa") ||
+                            l.Action.Contains("Gửi")) // Lọc các hành động liên quan đến Thông báo
+                .OrderByDescending(l => l.LogDate)
+                .Take(50)
+                .ToListAsync();
+
+            // 2. Ánh xạ dữ liệu sang định dạng JSON phù hợp với JavaScript
+            var historyData = logEntries.Select(l => new
+            {
+                // Sử dụng LogDate từ DB thay vì DateTime.Now
+                Time = l.LogDate,
+                // Lấy FullName của người dùng từ mối quan hệ User
+                User = l.User != null ? l.User.FullName : "Unknown",
+                Action = l.Action,
+                // Cần có logic để xác định Type (Gửi, Sửa, Xóa, Tự động)
+                Type = GetActionType(l.Action)
+            }).ToList();
+
+            // 3. Trả về dữ liệu dưới dạng JSON
+            return Json(historyData);
+        }
+
+        // Hàm hỗ trợ để xác định loại hành động (Type) dựa trên nội dung Action
+        private string GetActionType(string action)
+        {
+            var lowerAction = action?.ToLower() ?? string.Empty;
+
+            if (lowerAction.Contains("tạo thông báo") || lowerAction.Contains("gửi"))
+            {
+                return "Gửi";
+            }
+            if (lowerAction.Contains("chỉnh sửa") || lowerAction.Contains("sửa"))
+            {
+                return "Sửa";
+            }
+            if (lowerAction.Contains("xóa thông báo") || lowerAction.Contains("xóa"))
+            {
+                return "Xóa";
+            }
+            if (lowerAction.Contains("tự động") || lowerAction.Contains("system") || lowerAction.Contains("định kỳ") || lowerAction.Contains("schedule"))
+            {
+                return "Tự động";
+            }
+            if (lowerAction.Contains("login") || lowerAction.Contains("đăng nhập"))
+            {
+                return "Khác";
+            }
+            if (lowerAction.Contains("create student") || lowerAction.Contains("thêm sinh viên"))
+            {
+                return "Khác";
+            }
+
+            return "Khác";
+        }
+        private async Task LogAction(string actionName, string details, int userId)
+        {
+            var logEntry = new ActionLog
+            {
+                UserId = userId,
+                Action = actionName,
+                Details = details,
+                LogDate = DateTime.Now // Ghi nhận thời điểm hiện tại
+            };
+
+            _context.ActionLogs.Add(logEntry);
+            await _context.SaveChangesAsync();
+        }
+
+        // *************** Các hàm giả định/hỗ trợ ***************
+        private int GetCurrentUserId()
+        {
+            return 1; // Giá trị cố định cho mục đích minh họa
+        }
+
+        private List<int> GetRecipientUserIds(string target)
+        {
+            // Logic tìm kiếm IDs dựa trên target (all, students, teachers, class...)
+            return _context.Users.Select(u => u.UserId).ToList();
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetClassList()
+        {
+            // Cần phải Include Course vì CourseName được dùng trong JS
+            var classes = await _context.Classes
+                .Include(c => c.Course)
+                .Select(c => new
+                {
+                    ClassCode = c.ClassCode,
+                    ClassName = c.ClassName,
+                    CourseName = c.Course.CourseName
+                })
+                .OrderBy(c => c.ClassCode)
+                .ToListAsync();
+
+            return Json(classes);
+        }
+        // *************** HÀM HỖ TRỢ LỌC VÀ SẮP XẾP ***************
+
+        private IQueryable<Notification> ApplyTimeFilter(IQueryable<Notification> query, string filter)
+        {
+            if (string.IsNullOrEmpty(filter) || filter.ToLower() == "all" || filter.ToLower() == "")
+            {
+                return query;
+            }
+
+            var today = DateTime.Today;
+
+            return filter.ToLower() switch
+            {
+                "today" => query.Where(n => n.CreatedDate.Date == today),
+
+                "week" => query.Where(n =>
+                    n.CreatedDate >= GetStartOfWeek(today) &&
+                    n.CreatedDate < GetStartOfWeek(today).AddDays(7)),
+
+                "month" => query.Where(n =>
+                    n.CreatedDate.Year == today.Year &&
+                    n.CreatedDate.Month == today.Month),
+
+                _ => query,
+            };
+        }
+
+        private IQueryable<Notification> ApplySortOrder(IQueryable<Notification> query, string sortBy)
+        {
+            return sortBy?.ToLower() switch
+            {
+                "oldest" => query.OrderBy(n => n.CreatedDate),
+                "most_recipients" => query.OrderByDescending(n => n.NotificationRecipients.Count),
+                _ => query.OrderByDescending(n => n.CreatedDate),
+            };
+        }
+
+        private DateTime GetStartOfWeek(DateTime date)
+        {
+            // Giả sử tuần bắt đầu từ Chủ Nhật (Sunday)
+            int diff = (7 + (date.DayOfWeek - DayOfWeek.Sunday)) % 7;
+            return date.AddDays(-1 * diff).Date;
+        }
+        /// <summary>
+        /// Lấy thông tin chi tiết của một thông báo theo ID từ cơ sở dữ liệu.
+        /// </summary>
+        // GET: /Notification/GetNotificationDetail/5
+        [HttpGet]
+        public async Task<IActionResult> GetNotificationDetail(int id)
+        {
+            // 1. Truy vấn thông báo chi tiết bằng ID.
+            // Sử dụng Include để tải các mối quan hệ (Creator và NotificationRecipients)
+            // để tránh vấn đề N+1 query.
+            var notification = await _context.Notifications
+                .Include(n => n.Creator)
+                .Include(n => n.NotificationRecipients)
+                    .ThenInclude(r => r.Recipient) // Giả định Recipient là User
+                .FirstOrDefaultAsync(n => n.NotificationId == id);
+
+            if (notification == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy thông báo chi tiết với ID: {id}." });
+            }
+
+            // 2. Chuẩn bị dữ liệu để trả về JSON
+
+            // Lấy tên 5 người nhận đầu tiên cho mục đích hiển thị tóm tắt.
+            var recipientNames = notification.NotificationRecipients
+                // Giả định Recipient có trường FullName
+                .Select(r => r.Recipient.FullName)
+                .Take(5)
+                .ToList();
+
+            // Xử lý trường hợp không có người nhận
+            if (!recipientNames.Any())
+            {
+                recipientNames.Add("Không có người nhận cụ thể");
+            }
+
+            // 3. Tạo đối tượng JSON trả về (phải khớp với cấu trúc trong JS)
+            var detail = new
+            {
+                Id = notification.NotificationId,
+                Title = notification.Title,
+                Content = notification.Content,
+
+                // Sử dụng CreatedDate (hoặc ScheduleDate nếu bạn có trường đó)
+                ScheduleDate = notification.CreatedDate.ToString("dd/MM/yyyy"),
+                ScheduleTime = notification.CreatedDate.ToString("HH:mm"),
+
+                // Bạn cần logic để xác định RecipientGroup (Ví dụ: "Toàn bộ", "Lớp X").
+                // Tạm thời lấy tên người tạo cho đơn giản.
+                RecipientGroup = "Được tạo bởi: " + notification.Creator?.FullName,
+
+                // Danh sách tên người nhận (dùng để hiển thị chi tiết trong modal)
+                Recipients = recipientNames,
+
+                // Trạng thái đơn giản
+                Status = (notification.CreatedDate > DateTime.Now) ? "Đã lên lịch" : "Đã gửi",
+
+                // Tổng số lượng
+                TotalRecipients = notification.NotificationRecipients.Count
+            };
+
+            return Json(detail);
+        }
+        // POST: /Notification/Delete
+        [HttpPost]
+        public async Task<IActionResult> Delete(int id)
+        {
+            int deleterId = GetCurrentUserId();
+            // 1. Tìm thông báo cần xóa
+            var notification = await _context.Notifications
+                .FirstOrDefaultAsync(n => n.NotificationId == id);
+
+            if (notification == null)
+            {
+                return NotFound(new { success = false, message = $"Không tìm thấy thông báo với ID: {id}." });
+            }
+            string deletedTitle = notification.Title;
+
+            // 2. Xóa thông báo
+            try
+            {
+                _context.Notifications.Remove(notification);
+                await _context.SaveChangesAsync();
+
+                string logDetails = $"Thông báo ID {id} ({deletedTitle}). Đã bị xóa vĩnh viễn.";
+                await LogAction("Xóa thông báo", logDetails, deleterId);
+
+                // 3. Trả về kết quả thành công
+                return Ok(new { success = true, message = $"Đã xóa thông báo ID {id} thành công." });
+            }
+            catch (DbUpdateException ex)
+            {
+                // Xử lý lỗi nếu có ràng buộc ngoại lệ nào đó (ít xảy ra với CASCADE đã cấu hình)
+                return StatusCode(500, new { success = false, message = "Lỗi cơ sở dữ liệu khi xóa thông báo.", error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Đã xảy ra lỗi không xác định.", error = ex.Message });
+            }
+        }
+        // POST: /Notification/Resend/5
+        /// <summary>
+        /// Gửi lại một thông báo đã có, tạo ra một bản ghi thông báo mới với ngày tạo là thời điểm hiện tại.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Resend(int id)
+        {
+            // [GIẢ ĐỊNH] Lấy ID người dùng hiện tại
+            int creatorId = GetCurrentUserId();
+
+            // 1. Tìm thông báo gốc
+            var originalNotification = await _context.Notifications
+                .Include(n => n.NotificationRecipients) // Cần tải người nhận để sao chép
+                .FirstOrDefaultAsync(n => n.NotificationId == id);
+
+            if (originalNotification == null)
+            {
+                return NotFound(new { success = false, message = $"Không tìm thấy thông báo ID {id} để gửi lại." });
+            }
+
+            // 2. Tạo đối tượng Notification mới (Bản sao)
+            var newNotification = new Notification
+            {
+                Title = originalNotification.Title,
+                Content = originalNotification.Content,
+                // Ghi đè CreatedDate là thời điểm hiện tại (ngay khi nhấn Gửi lại)
+                CreatedDate = DateTime.Now,
+                CreatorId = creatorId,
+            };
+
+            _context.Add(newNotification);
+
+            // 3. Sao chép danh sách người nhận (tạo bản ghi NotificationRecipient mới)
+            foreach (var recipient in originalNotification.NotificationRecipients)
+            {
+                newNotification.NotificationRecipients.Add(new NotificationRecipient
+                {
+                    NotificationId = newNotification.NotificationId, // ID mới sẽ được EF Core tự động gán
+                    RecipientId = recipient.RecipientId,
+                    IsRead = false // Reset trạng thái đọc
+                });
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                // GHI LOG HOẠT ĐỘNG
+                string logDetails = $"Gửi lại thông báo gốc ID {id} (\"{originalNotification.Title}\"). Đã tạo thông báo mới ID {newNotification.NotificationId}.";
+                await LogAction("Gửi lại thông báo", logDetails, creatorId);
+
+                return Ok(new { success = true, message = $"Thông báo \"{originalNotification.Title}\" đã được gửi lại thành công! (ID mới: {newNotification.NotificationId})" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Lỗi khi gửi lại thông báo.", error = ex.Message });
+            }
         }
 
         // Reports
         public IActionResult Reports()
         {
             return View();
+        }
+        // ====================================================================
+        // REPORTS & CHARTS DATA (API ENDPOINTS)
+        // ====================================================================
+
+        [HttpGet]
+        public async Task<IActionResult> GetEnrollmentTrendData()
+        {
+            var sixMonthsAgo = DateTime.Now.AddMonths(-6);
+
+            var monthlyEnrollments = await _context.Enrollments
+                .Where(e => e.EnrollmentDate >= sixMonthsAgo)
+                .GroupBy(e => new
+                {
+                    e.EnrollmentDate.Year,
+                    e.EnrollmentDate.Month
+                })
+                .Select(g => new
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    Count = g.Count()
+                })
+                .OrderBy(x => x.Year)
+                .ThenBy(x => x.Month)
+                .ToListAsync();
+
+            // Format lại dữ liệu cho Chart.js
+            var result = monthlyEnrollments.Select(m => new
+            {
+                Label = $"{m.Month}/{m.Year}",
+                Data = m.Count
+            }).ToList();
+
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCourseDistributionData()
+        {
+            // Lấy tổng số sinh viên (Enrollments) theo Khóa học
+            var courseEnrollments = await _context.Courses
+                .Select(c => new
+                {
+                    CourseName = c.CourseName,
+                    TotalStudents = c.Classes.SelectMany(cl => cl.Enrollments).Count()
+                })
+                .Where(c => c.TotalStudents > 0)
+                .OrderByDescending(c => c.TotalStudents)
+                .ToListAsync();
+
+            var labels = courseEnrollments.Select(c => c.CourseName).ToList();
+            var data = courseEnrollments.Select(c => c.TotalStudents).ToList();
+
+            return Json(new { labels = labels, data = data });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetScoreDistributionData()
+        {
+            // *GIẢ ĐỊNH*: Lấy tất cả điểm số và phân loại thành 4 nhóm
+            // Trong thực tế, bạn nên lọc theo Khóa học/Lớp học hiện tại
+            var allScores = await _context.Scores
+                .Select(s => s.ScoreValue)
+                .ToListAsync();
+
+            int excellent = allScores.Count(s => s >= 8.5m); // Giỏi
+            int good = allScores.Count(s => s >= 7m && s < 8.5m); // Khá
+            int fair = allScores.Count(s => s >= 5.5m && s < 7m); // Trung bình
+            int poor = allScores.Count(s => s < 5.5m); // Yếu/Kém
+
+            return Json(new
+            {
+                labels = new[] { "Giỏi (8.5+)", "Khá (7.0-8.4)", "TB (5.5-6.9)", "Yếu/Kém (<5.5)" },
+                data = new[] { excellent, good, fair, poor },
+                backgroundColor = new[] { "#198754", "#0dcaf0", "#ffc107", "#dc3545" }
+            });
+        }
+        [HttpPost]
+        public async Task<IActionResult> ExportReportsExcel()
+        {
+            // 1. Chuẩn bị dữ liệu tổng hợp
+            // Tổng hợp dữ liệu từ các bảng khác nhau
+            var totalStudents = await _context.Students.CountAsync();
+            var newStudentsThisMonth = await _context.Users.Where(u => u.RoleId == 3 && u.DateCreated.Month == DateTime.Now.Month && u.DateCreated.Year == DateTime.Now.Year).CountAsync(); // Giả định RoleId 3 là Student
+            var totalClasses = await _context.Classes.CountAsync();
+
+            // Lấy dữ liệu cho Báo cáo Tài chính
+            var allTuitions = await _context.Tuitions
+                // Bổ sung các Include/ThenInclude bị thiếu
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Class)
+                        .ThenInclude(c => c.Course)
+                .ToListAsync();
+            var totalRevenue = allTuitions.Sum(t => t.AmountPaid);
+            var totalRemaining = allTuitions.Sum(t => t.TotalFee - t.AmountPaid);
+
+            // Lấy dữ liệu cho Báo cáo Ghi danh (Dữ liệu giả lập cho biểu đồ)
+            // Trong thực tế, bạn sẽ lấy dữ liệu này từ DB
+            var enrollmentData = new List<(string Month, int Count)>
+            {
+                ("Tháng 7", 45), ("Tháng 8", 52), ("Tháng 9", 68), ("Tháng 10", 72), ("Tháng 11", 85), ("Tháng 12", 92)
+            };
+
+            // Sử dụng EPPlus để tạo file Excel đa Sheet
+            using (var package = new ExcelPackage())
+            {
+                // ==========================================================
+                // SHEET 1: TÓM TẮT CHUNG
+                // ==========================================================
+                var wsSummary = package.Workbook.Worksheets.Add("1_TómTắtChung");
+                wsSummary.Cells[1, 1].Value = "BÁO CÁO TỔNG HỢP HỆ THỐNG QUẢN LÝ SINH VIÊN";
+                wsSummary.Cells[1, 1, 1, 2].Merge = true;
+                wsSummary.Cells[1, 1].Style.Font.Bold = true;
+                wsSummary.Cells[1, 1].Style.Font.Size = 14;
+
+                wsSummary.Cells[3, 1].Value = "Thời gian xuất báo cáo:";
+                wsSummary.Cells[3, 2].Value = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                wsSummary.Cells[3, 1, 3, 2].Style.Font.Bold = true;
+
+                // Bảng Tóm Tắt
+                int row = 5;
+                wsSummary.Cells[row++, 1].Value = "THÔNG SỐ CHÍNH";
+                wsSummary.Cells[row - 1, 1].Style.Font.Bold = true;
+
+                wsSummary.Cells[row, 1].Value = "Tổng số sinh viên"; wsSummary.Cells[row++, 2].Value = totalStudents;
+                wsSummary.Cells[row, 1].Value = "Sinh viên mới (Tháng này)"; wsSummary.Cells[row++, 2].Value = newStudentsThisMonth;
+                wsSummary.Cells[row, 1].Value = "Tổng số lớp học đang hoạt động"; wsSummary.Cells[row++, 2].Value = totalClasses;
+                wsSummary.Cells[row, 1].Value = "Tổng Doanh Thu Đã Thu"; wsSummary.Cells[row++, 2].Value = totalRevenue;
+                wsSummary.Cells[row, 1].Value = "Tổng Số Tiền Còn Phải Thu"; wsSummary.Cells[row++, 2].Value = totalRemaining;
+
+                wsSummary.Cells[5, 1, row - 1, 2].AutoFitColumns();
+                wsSummary.Cells[5, 1, row - 1, 2].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+
+                // ==========================================================
+                // SHEET 2: XU HƯỚNG GHI DANH (Dữ liệu từ Chart)
+                // ==========================================================
+                var wsEnrollment = package.Workbook.Worksheets.Add("2_XuHướngGhiDanh");
+                wsEnrollment.Cells[1, 1].Value = "BÁO CÁO XU HƯỚNG GHI DANH 6 THÁNG GẦN ĐÂY";
+                wsEnrollment.Cells[1, 1, 1, 2].Merge = true;
+                wsEnrollment.Cells[1, 1].Style.Font.Bold = true;
+                wsEnrollment.Cells[1, 1].Style.Font.Size = 14;
+
+                // Header
+                wsEnrollment.Cells[3, 1].Value = "Tháng";
+                wsEnrollment.Cells[3, 2].Value = "Số Sinh Viên Ghi Danh";
+                wsEnrollment.Cells[3, 1, 3, 2].Style.Font.Bold = true;
+
+                // Data
+                int enrollRow = 4;
+                foreach (var data in enrollmentData)
+                {
+                    wsEnrollment.Cells[enrollRow, 1].Value = data.Month;
+                    wsEnrollment.Cells[enrollRow, 2].Value = data.Count;
+                    enrollRow++;
+                }
+
+                wsEnrollment.Cells.AutoFitColumns();
+
+                // ==========================================================
+                // SHEET 3: TÓM TẮT TÀI CHÍNH
+                // ==========================================================
+                // Tận dụng Action ExportExcel cho học phí nếu nó trả về IQueryable hoặc gọi lại logic đó
+                // Ở đây ta đơn giản hóa bằng cách tạo Sheet mới
+
+                var wsFinance = package.Workbook.Worksheets.Add("3_TàiChính");
+                wsFinance.Cells[1, 1].Value = "BÁO CÁO CHI TIẾT CÁC KHOẢN HỌC PHÍ";
+                wsFinance.Cells[1, 1, 1, 10].Merge = true;
+                wsFinance.Cells[1, 1].Style.Font.Bold = true;
+                wsFinance.Cells[1, 1].Style.Font.Size = 14;
+
+                // Dữ liệu chi tiết học phí (Sử dụng lại logic từ Tuition Export)
+                wsFinance.Cells[3, 1].Value = "ID";
+                wsFinance.Cells[3, 2].Value = "Mã SV";
+                wsFinance.Cells[3, 3].Value = "Tên Sinh Viên";
+                wsFinance.Cells[3, 4].Value = "Lớp Học";
+                wsFinance.Cells[3, 5].Value = "Khóa Học";
+                wsFinance.Cells[3, 6].Value = "Tổng Học Phí (VNĐ)";
+                wsFinance.Cells[3, 7].Value = "Đã Đóng (VNĐ)";
+                wsFinance.Cells[3, 8].Value = "Còn Lại (VNĐ)";
+                wsFinance.Cells[3, 9].Value = "Hạn Đóng";
+                wsFinance.Cells[3, 10].Value = "Trạng Thái";
+                wsFinance.Cells[3, 1, 3, 10].Style.Font.Bold = true;
+
+                int financeRow = 4;
+                foreach (var tuition in allTuitions)
+                {
+                    var remaining = tuition.TotalFee - tuition.AmountPaid;
+
+                    wsFinance.Cells[financeRow, 1].Value = tuition.TuitionId;
+                    wsFinance.Cells[financeRow, 2].Value = tuition.Enrollment?.Student?.StudentCode;
+                    wsFinance.Cells[financeRow, 3].Value = tuition.Enrollment?.Student?.FullName;
+                    wsFinance.Cells[financeRow, 4].Value = tuition.Enrollment?.Class?.ClassName;
+                    wsFinance.Cells[financeRow, 5].Value = tuition.Enrollment?.Class?.Course?.CourseName;
+                    wsFinance.Cells[financeRow, 6].Value = tuition.TotalFee;
+                    wsFinance.Cells[financeRow, 7].Value = tuition.AmountPaid;
+                    wsFinance.Cells[financeRow, 8].Value = remaining;
+                    wsFinance.Cells[financeRow, 9].Value = tuition.DueDate?.ToString("dd/MM/yyyy");
+                    wsFinance.Cells[financeRow, 10].Value = tuition.Status switch
+                    {
+                        "Paid" => "Đã thanh toán",
+                        "Pending" => "Chưa thanh toán",
+                        "Overdue" => "Quá hạn",
+                        _ => "Không xác định"
+                    };
+                    financeRow++;
+                }
+
+                wsFinance.Cells.AutoFitColumns();
+
+                // 2. Chuyển package thành stream và trả về
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+                stream.Position = 0;
+
+                string excelName = $"BaoCaoTongHop_{DateTime.Now.ToString("yyyyMMddHHmmss")}.xlsx";
+                return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
+            }
+        }
+        public async Task<IActionResult> ExportReportsPdf()
+        {
+            // 1. Tải đầy đủ dữ liệu chi tiết
+            var allTuitions = await _context.Tuitions
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Class)
+                        .ThenInclude(c => c.Course)
+                .ToListAsync();
+
+            // 2. Tính toán và gán dữ liệu vào ViewModel
+            var totalStudents = await _context.Students.CountAsync();
+            var rawTotalRevenue = allTuitions.Sum(t => t.AmountPaid);
+
+            var viewModel = new ReportDataViewModel
+            {
+                TotalStudents = totalStudents,
+                TotalRevenue = rawTotalRevenue.ToString("N0", new CultureInfo("vi-VN")) + " VNĐ",
+                DateGenerated = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
+                TuitionDetails = allTuitions
+            };
+
+            // 3. Kích hoạt Rotativa để xuất PDF
+            return new Rotativa.AspNetCore.ViewAsPdf("PdfReportTemplate", viewModel)
+            {
+                FileName = $"BaoCaoTongHop_{DateTime.Now:yyyyMMdd_HHmmss}.pdf",
+                PageOrientation = Rotativa.AspNetCore.Options.Orientation.Landscape,
+                PageSize = Rotativa.AspNetCore.Options.Size.A4
+            };
+        }
+        // POST: /Admin/GenerateCustomReport
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult GenerateCustomReport(string reportType, string reportPeriod)
+        {
+            if (string.IsNullOrEmpty(reportType))
+            {
+                TempData["ErrorMessage"] = "Vui lòng chọn loại báo cáo.";
+                return RedirectToAction(nameof(Reports));
+            }
+
+            switch (reportType.ToLower())
+            {
+                case "enrollment":
+                case "finance":
+                case "performance":
+                    TempData["SuccessMessage"] = $"Yêu cầu tạo báo cáo **{reportType}** trong kỳ **{reportPeriod}** đã được ghi nhận. Vui lòng chờ tính năng xuất báo cáo chi tiết.";
+                    return RedirectToAction(nameof(Reports));
+
+                case "summary":
+                default:
+                    TempData["SuccessMessage"] = $"Đang tạo báo cáo tổng hợp. File Excel sẽ được tải về. (Kỳ: {reportPeriod})";
+                    TempData["ExportCommand"] = "summary";
+                    TempData["SuccessMessage"] = $"Đã sẵn sàng để tạo báo cáo **Tổng hợp** (Kỳ: {reportPeriod}). Vui lòng nhấn nút **Xuất Excel** hoặc **Xuất PDF** để tải file.";
+                    return RedirectToAction(nameof(Reports));
+            }
         }
     }
 }
