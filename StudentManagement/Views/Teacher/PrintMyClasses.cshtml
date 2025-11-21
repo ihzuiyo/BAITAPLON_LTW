@@ -1,0 +1,91 @@
+﻿@model IEnumerable<StudentManagement.Models.Class>
+@{
+    Layout = null; // Loại bỏ layout chính để tối ưu cho in ấn
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>In Danh Sách Lớp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @@media print {
+            body {
+                margin: 0;
+                padding: 0;
+                font-size: 10pt;
+            }
+
+            .page-title {
+                margin-top: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
+        body {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h3 class="text-center page-title mb-4">DANH SÁCH LỚP HỌC ĐANG PHỤ TRÁCH</h3>
+        <p class="text-center mb-4">Giảng viên: Tên Giảng Viên (Thay bằng Model.Teacher.FullName)</p>
+
+        @if (Model != null && Model.Any())
+        {
+            <table class="table table-bordered table-striped">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Mã Lớp</th>
+                        <th>Tên Lớp</th>
+                        <th>Khóa Học</th>
+                        <th>Lịch Học</th>
+                        <th>Phòng</th>
+                        <th>Số HV</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ClassCode</td>
+                            <td>@item.ClassName</td>
+                            <td>@item.Course?.CourseName</td>
+                            <td>
+                                @foreach (var schedule in item.ClassSchedules.OrderBy(s => s.Weekday))
+                                {
+                                    <small>@schedule.Weekday: @schedule.StartTime.ToString("HH:mm")</small>
+                        
+                                    <br />
+                                }
+                            </td>
+                            <td>
+                                @item.ClassSchedules.FirstOrDefault()?.Room?.RoomName
+                            </td>
+                            <td>@item.Enrollments?.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-center text-muted">Không có dữ liệu lớp học để in.</p>
+        }
+    </div>
+
+    <div class="text-center mt-4 no-print">
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> In Trang Này
+        </button>
+        <a href="javascript:window.close()" class="btn btn-secondary">Đóng</a>
+    </div>
+
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+</body>
+</html>
