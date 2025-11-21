@@ -1,0 +1,110 @@
+﻿@model StudentManagement.Models.Student
+@{
+    ViewData["Title"] = "Chỉnh Sửa Sinh Viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Sinh Viên: @Model.FullName</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form asp-action="EditStudent" method="post">
+            @Html.AntiForgeryToken()
+
+           
+            <input type="hidden" asp-for="StudentId" />
+            <input type="hidden" asp-for="UserId" />
+
+            
+            <input type="hidden" name="Email" value="@Model.User?.Email" />
+            <input type="hidden" name="PhoneNumber" value="@Model.User?.PhoneNumber" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> I. Thông tin Cá nhân & Học vụ</h6>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label asp-for="StudentCode" class="form-label">Mã SV</label>
+                    <input asp-for="StudentCode" class="form-control" required />
+                    <span asp-validation-for="StudentCode" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="FullName" class="form-label">Họ và Tên</label>
+                    <input asp-for="FullName" class="form-control" required />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label asp-for="StatusId" class="form-label">Trạng Thái</label>
+                    <select asp-for="StatusId" class="form-select" required>
+                        <option value="">-- Chọn trạng thái --</option>
+                        @if (ViewBag.StudentStatuses is List<StudentManagement.Models.StudentStatus> statuses)
+                        {
+                            @foreach (var status in statuses)
+                            {
+                                <option value="@status.StatusId">@status.StatusName</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="StatusId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label asp-for="DateOfBirth" class="form-label">Ngày Sinh</label>
+                    
+                    @{
+                        string dateOfBirthString = Model.DateOfBirth.HasValue
+                        ? Model.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                        : "";
+                    }
+                    <input type="date" name="DateOfBirth" value="@dateOfBirthString" class="form-control" />
+                    <span asp-validation-for="DateOfBirth" class="text-danger"></span>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label asp-for="Gender" class="form-label">Giới Tính</label>
+                    <select asp-for="Gender" class="form-select">
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                    <span asp-validation-for="Gender" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Address" class="form-label">Địa Chỉ</label>
+                    <input asp-for="Address" class="form-control" placeholder="123 Đường ABC, Quận XYZ" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+            </div>
+
+            <h6 class="mb-3 text-primary mt-4"><i class="fas fa-address-book"></i> II. Thông tin Liên hệ (User)</h6>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email</label>
+                    <input name="Email" value="@Model.User?.Email" class="form-control" required />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Số Điện Thoại</label>
+                    <input name="PhoneNumber" value="@Model.User?.PhoneNumber" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group pt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu Thay Đổi
+                </button>
+                <a asp-action="Students" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

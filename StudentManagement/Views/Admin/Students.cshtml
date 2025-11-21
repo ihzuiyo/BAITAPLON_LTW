@@ -64,10 +64,10 @@
                     @foreach (var student in Model)
                     {
                         var statusName = student.Status?.StatusName ?? "Không xác định";
-                        var badgeClass = statusName == "Đang học" ? "bg-success" : 
-                                        statusName == "Bảo lưu" ? "bg-warning" : 
-                                        statusName == "Tốt nghiệp" ? "bg-info" : 
-                                        "bg-secondary";
+                        var badgeClass = statusName == "Đang học" ? "bg-success" :
+                        statusName == "Bảo lưu" ? "bg-warning" :
+                        statusName == "Tốt nghiệp" ? "bg-info" :
+                        "bg-secondary";
 
                         <tr data-student-id="@student.StudentId">
                             <td><input type="checkbox" class="row-checkbox"></td>
@@ -222,7 +222,7 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-       
+
 
     <script>
         // HÀM XUẤT EXCEL CHO DANH SÁCH SINH VIÊN
@@ -318,7 +318,7 @@
             $('#filterStatus').on('change', applyFilters);
 
 
-                    
+
             // Ví dụ: Logic tìm kiếm cơ bản (Nếu bạn chưa có hàm filter tổng hợp)
 
             // $('#searchStudent').on('keyup', function() {
