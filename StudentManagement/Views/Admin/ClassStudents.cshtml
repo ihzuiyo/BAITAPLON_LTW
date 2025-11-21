@@ -16,10 +16,10 @@
         <a asp-action="Classes" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Quay lại Danh sách Lớp
         </a>
-        <button class="btn btn-success">
+        @* <button class="btn btn-success">
             <i class="fas fa-file-excel"></i> Xuất Excel
-        </button>
-        <button class="btn btn-primary">
+        </button> *@
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
             <i class="fas fa-plus"></i> Thêm Sinh Viên
         </button>
     </div>
@@ -72,7 +72,17 @@
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-warning" title="Cập nhật điểm">
+                                    <button class="btn btn-sm btn-warning update-score-btn" title="Cập nhật điểm"
+                                        data-bs-toggle="modal" data-bs-target="#updateScoreModal"
+                                        data-enrollment-id="@enrollment.EnrollmentId"
+                                        data-student-name="@student.FullName"
+        
+                                        data-student-scores='@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                                        (enrollment.Scores ?? new List<Score>()).Select(s => new { 
+                                            ScoreTypeId = s.ScoreType.ScoreTypeId, 
+                                            ScoreValue = s.ScoreValue, 
+                                            ScoreId = s.ScoreId 
+                                        })))'>
                                         <i class="fas fa-file-signature"></i>
                                     </button>
                                     <button class="btn btn-sm btn-danger" title="Hủy ghi danh">
@@ -87,9 +97,90 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addStudentModalLabel">
+                    <i class="fas fa-plus"></i> Thêm Sinh Viên vào Lớp @classItem?.ClassCode
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="enrollForm" asp-action="EnrollStudent" asp-controller="Admin" method="post">
+                @Html.AntiForgeryToken()
+
+                
+                <input type="hidden" name="ClassId" value="@classItem?.ClassId" />
+
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        Chọn một hoặc nhiều sinh viên dưới đây để ghi danh vào lớp.
+                    </div>
+
+                   
+                    <label class="form-label">Chọn Sinh Viên:</label>
+                    <div class="mb-3">
+                        
+                        <select name="StudentIds" id="selectStudents" class="form-select" multiple required
+                                asp-items="ViewBag.AvailableStudents">
+                            
+                        </select>
+                        <small class="form-text text-muted">Giữ Ctrl hoặc Cmd để chọn nhiều sinh viên.</small>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Ghi Danh
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="updateScoreModal" tabindex="-1" aria-labelledby="updateScoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="updateScoreModalLabel"><i class="fas fa-file-signature"></i> Cập Nhật Điểm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="scoreForm" asp-action="UpdateScore" asp-controller="Admin" method="post">
+                @Html.AntiForgeryToken()
+
+               
+                <input type="hidden" name="EnrollmentId" id="modalEnrollmentId" />
+                <input type="hidden" name="ClassId" value="@classItem?.ClassId" />
+
+                <div class="modal-body">
+                    <p>Tính năng đang cập nhật! <strong id="modalStudentName"></strong></p>
+                    <hr />
+
+                   
+                    <div id="scoreInputsContainer" class="score-inputs-container">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">Lưu Điểm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
-        // Có thể thêm script cho chức năng tìm kiếm, phân trang, hoặc AJAX ở đây
+        
     </script>
+    @{
+        // Đảm bảo bạn đã có _ValidationScriptsPartial
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    
 }

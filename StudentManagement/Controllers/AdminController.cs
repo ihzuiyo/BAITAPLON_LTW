@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using StudentManagement.Attributes;
 using StudentManagement.Models;
 using StudentManagement.Models.ViewModels;
-using System.Globalization;
 namespace StudentManagement.Controllers
 
 {
@@ -195,70 +196,79 @@ namespace StudentManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditStudent(int id,
-            [Bind("StudentId, StudentCode, FullName, DateOfBirth, Gender, Address, StatusId, UserId")] Student studentInput,
-            string Email, // Nhận Email độc lập từ form
-            string PhoneNumber) // Nhận Phone độc lập từ form
+            [Bind("StudentId, StudentCode, DateOfBirth, Gender, Address, StatusId, UserId")] Student studentInput)
         {
-            // 1. Kiểm tra ID
-            if (id != studentInput.StudentId)
+
+            if (id != studentInput.StudentId) return NotFound();
+
+            // 1. Tải Entity gốc KHÔNG theo dõi (AsNoTracking) để tham khảo
+            var originalStudent = await _context.Students
+                .AsNoTracking()
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StudentId == id);
+
+            if (originalStudent == null) return NotFound();
+
+            // 2. Gán các trường BẮT BUỘC KHÔNG CHỈNH SỬA TỪ GỐC VÀO studentInput
+            studentInput.FullName = originalStudent.FullName;
+            studentInput.Email = originalStudent.Email;
+            studentInput.PhoneNumber = originalStudent.PhoneNumber;
+            studentInput.UserId = originalStudent.UserId;
+
+            // Kiểm tra tính hợp lệ của Model
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                // Nếu Validation thất bại, tải lại ViewBag và trả về View
+                ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+                return View(studentInput);
             }
 
-            // 2. Kiểm tra ModelState (Validation)
-            if (ModelState.IsValid)
+            try
             {
-                // Tải Entity gốc (BẮT BUỘC INCLUDE USER)
-                var studentToUpdate = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
+                // 3. Tải các Entity gốc VÀO TRACKING CONTEXT
+                var studentToTrack = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
 
-                if (studentToUpdate == null) return NotFound();
+                if (studentToTrack == null) return NotFound();
 
-                try
+                // 4. ÁP DỤNG THAY ĐỔI VÀO ENTITY ĐANG ĐƯỢC TRACK
+                // Cập nhật Student (chỉ các trường học vụ)
+                studentToTrack.StudentCode = studentInput.StudentCode;
+                studentToTrack.DateOfBirth = studentInput.DateOfBirth;
+                studentToTrack.Gender = studentInput.Gender;
+                studentToTrack.Address = studentInput.Address;
+                studentToTrack.StatusId = studentInput.StatusId;
+
+                // Cập nhật User (Đảm bảo các trường User.FullName/Email/Phone không bị mất)
+                if (studentToTrack.User != null)
                 {
-                    // 3. Cập nhật thủ công các thuộc tính Student
-                    studentToUpdate.StudentCode = studentInput.StudentCode;
-                    studentToUpdate.FullName = studentInput.FullName;
-                    studentToUpdate.DateOfBirth = studentInput.DateOfBirth;
-                    studentToUpdate.Gender = studentInput.Gender;
-                    studentToUpdate.Address = studentInput.Address;
-                    studentToUpdate.StatusId = studentInput.StatusId;
+                    studentToTrack.User.FullName = originalStudent.FullName;
+                    studentToTrack.User.Email = originalStudent.Email;
+                    studentToTrack.User.PhoneNumber = originalStudent.PhoneNumber;
 
-                    // 4. Cập nhật thuộc tính User (Email/Phone/FullName)
-                    if (studentToUpdate.User != null)
-                    {
-                        studentToUpdate.User.Email = Email;
-                        studentToUpdate.User.PhoneNumber = PhoneNumber;
-                        studentToUpdate.User.FullName = studentInput.FullName;
-
-                        // GẮN CỜ THỦ CÔNG: Báo cho EF Core biết đối tượng User đã được thay đổi
-                        _context.Entry(studentToUpdate.User).State = EntityState.Modified;
-                    }
-
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = $"Cập nhật sinh viên {studentToUpdate.FullName} thành công!";
-
-                    // Quay về trang danh sách sinh viên
-                    return RedirectToAction("Students");
+                    // Gắn cờ cho User (Dù không thay đổi, việc này đôi khi cần thiết để EF không bỏ qua User)
+                    _context.Entry(studentToTrack.User).State = EntityState.Modified;
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    // Xử lý lỗi Concurrency
-                    if (!_context.Classes.Any(e => e.ClassId == studentInput.StudentId)) return NotFound();
-                    else throw;
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Lỗi hệ thống khi cập nhật: {ex.Message}");
-                }
+
+                // 5. Lưu thay đổi
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Cập nhật hồ sơ sinh viên {originalStudent.FullName} thành công!";
+                return RedirectToAction("Students");
+            }
+            catch (DbUpdateException ex)
+            {
+                // ... (Xử lý lỗi database) ...
+                ModelState.AddModelError("", "Lỗi cập nhật database. Mã SV có thể đã tồn tại.");
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi chung: {ex.Message}");
             }
 
-            // 5. Nếu Model KHÔNG hợp lệ, tải lại ViewBag và trả về View
+            // Nếu lỗi xảy ra trong try/catch, tải lại ViewBag và trả về View
             ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
-            // Trả về studentInput để giữ lại các giá trị người dùng vừa nhập
             return View(studentInput);
         }
-
         // POST: Admin/DeleteStudent/5
         [HttpPost]
         public async Task<IActionResult> DeleteStudent(int id)
@@ -400,69 +410,84 @@ namespace StudentManagement.Controllers
         // GET: /Admin/EditClass/5
         public async Task<IActionResult> EditClass(int id)
         {
-            if (id <= 0)
-            {
-                return NotFound();
-            }
+            if (id <= 0) return NotFound();
 
-            // Lấy lớp học cần chỉnh sửa, bao gồm Course và Teacher
             var classItem = await _context.Classes
                 .Include(c => c.Course)
+                // Cần Include Teacher để lấy tên GV hiển thị trong form/header (nếu cần)
+                .Include(c => c.Teacher)
                 .FirstOrDefaultAsync(m => m.ClassId == id);
 
-            if (classItem == null)
-            {
-                return NotFound();
-            }
+            if (classItem == null) return NotFound();
 
-            // Lấy danh sách Courses và Teachers để đổ vào Dropdown List trong View
-            ViewBag.Courses = await _context.Courses.ToListAsync();
-            ViewBag.Teachers = await _context.Teachers.ToListAsync();
+            ViewBag.Courses = new SelectList(_context.Courses, "CourseId", "CourseName", classItem.CourseId);
 
-            // Sẽ cần tạo View EditClass.cshtml trong Views/Admin/Classes/
+            // 2. CHUẨN BỊ CHO GIẢNG VIÊN (SelectList)
+            var teachersList = await _context.Teachers
+                .Select(t => new { TeacherId = t.TeacherId, FullName = t.LastName + " " + t.FirstName + " (" + t.TeacherCode + ")" })
+                .ToListAsync();
+
+            ViewBag.Teachers = new SelectList(teachersList, "TeacherId", "FullName", classItem.TeacherId);
+
             return View(classItem);
         }
 
         // POST: /Admin/EditClass
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditClass(int ClassId, [Bind("ClassId,CourseId,TeacherId,ClassCode,ClassName,MaxStudents")] Class classToUpdate)
+        public async Task<IActionResult> EditClass(int ClassId, [Bind("ClassId,CourseId,TeacherId,ClassCode,ClassName,MaxStudents")] Class classInput)
         {
-            if (ClassId != classToUpdate.ClassId)
-            {
-                return NotFound();
-            }
+            if (ClassId != classInput.ClassId) return NotFound();
 
-            // Kiểm tra tính hợp lệ của Model
+            // 1. Kiểm tra tính hợp lệ của Model
             if (ModelState.IsValid)
             {
+                // 🚨 Tải Entity Gốc để Cập nhật An toàn
+                var classToUpdate = await _context.Classes.FindAsync(ClassId);
+                if (classToUpdate == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy lớp học gốc để cập nhật.";
+                    return RedirectToAction(nameof(Classes));
+                }
+
                 try
                 {
-                    // Attach và cập nhật trạng thái Entity
-                    _context.Update(classToUpdate);
+                    // 2. Cập nhật thủ công các thuộc tính từ input (PHƯƠNG PHÁP AN TOÀN NHẤT)
+                    classToUpdate.TeacherId = classInput.TeacherId;   // Phân công GV
+                    classToUpdate.ClassName = classInput.ClassName;   // Tên lớp
+                    classToUpdate.MaxStudents = classInput.MaxStudents; // Sĩ số
+                    classToUpdate.ClassCode = classInput.ClassCode;   // Mã lớp
+                    classToUpdate.CourseId = classInput.CourseId;     // Khóa ngoại (Nếu được phép đổi)
+
+                    // 3. Lưu thay đổi
+                    // EF Core tự động tạo lệnh UPDATE chỉ cho các trường thực sự thay đổi
                     await _context.SaveChangesAsync();
+
                     TempData["SuccessMessage"] = $"Đã cập nhật lớp **{classToUpdate.ClassName}** thành công.";
+                    return RedirectToAction(nameof(Classes));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException ex)
                 {
-                    if (!_context.Classes.Any(e => e.ClassId == classToUpdate.ClassId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        // Xử lý lỗi trùng lặp mã lớp nếu cần
-                        TempData["ErrorMessage"] = "Cập nhật thất bại. Lớp học đã được chỉnh sửa bởi người khác hoặc Mã Lớp bị trùng.";
-                        return RedirectToAction(nameof(Classes));
-                    }
+                    // Bắt lỗi trùng lặp Mã Lớp hoặc lỗi FK
+                    TempData["ErrorMessage"] = "Cập nhật thất bại. Mã Lớp có thể đã bị trùng hoặc lỗi cơ sở dữ liệu.";
                 }
+                catch (Exception)
+                {
+                    TempData["ErrorMessage"] = "Lỗi hệ thống không xác định khi lưu.";
+                }
+
+                // Nếu có lỗi trong try/catch, chuyển hướng về trang danh sách
                 return RedirectToAction(nameof(Classes));
             }
 
-            // Nếu Model không hợp lệ, load lại danh sách Course/Teacher và trả về View
-            ViewBag.Courses = await _context.Courses.ToListAsync();
-            ViewBag.Teachers = await _context.Teachers.ToListAsync();
-            return View(classToUpdate);
+            // 4. Nếu Model không hợp lệ (Validation Failed)
+            TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại.";
+
+            // Tải lại ViewBag (SelectList) và trả về View
+            ViewBag.Courses = new SelectList(_context.Courses, "CourseId", "CourseName", classInput.CourseId);
+            ViewBag.Teachers = new SelectList(_context.Teachers.Select(t => new { TeacherId = t.TeacherId, FullName = t.LastName + " " + t.FirstName + " (" + t.TeacherCode + ")" }), "TeacherId", "FullName", classInput.TeacherId);
+
+            return View(classInput); // Trả lại View với dữ liệu form đã nhập
         }
         // GET: /Admin/ClassStudents/5
         public async Task<IActionResult> ClassStudents(int id)
@@ -495,9 +520,163 @@ namespace StudentManagement.Controllers
             // 3. Đưa dữ liệu vào ViewModel hoặc ViewBag (Ở đây dùng ViewBag để đơn giản hóa)
             ViewBag.ClassItem = classItem;
 
+            // 🚨 4. Tải danh sách sinh viên CHƯA ghi danh vào lớp này
+            var enrolledStudentIds = enrollments.Select(e => e.StudentId).ToList();
+
+            var availableStudents = await _context.Students
+                .Where(s => !enrolledStudentIds.Contains(s.StudentId)) // Lọc ra những người đã ghi danh
+                .Select(s => new SelectListItem
+                {
+                    Value = s.StudentId.ToString(),
+                    Text = $"{s.StudentCode} - {s.FullName}"
+                })
+                .ToListAsync();
+
+            ViewBag.AvailableStudents = availableStudents; // Gán cho Modal
+
+            // 5. Đưa dữ liệu vào ViewModel hoặc ViewBag
+            ViewBag.ClassItem = classItem;
+            ViewBag.ScoreTypes = await _context.ScoreTypes.OrderBy(st => st.ScoreTypeId).ToListAsync();
+
+            // 6. Đưa dữ liệu vào ViewModel hoặc ViewBag
+            ViewBag.ClassItem = classItem;
+            ViewBag.AvailableStudents = availableStudents;
+
+
             // Model sẽ là IEnumerable<Enrollment>
             return View(enrollments);
+
+
         }
+        // POST: /Admin/EnrollStudent
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnrollStudent(int ClassId, List<int> StudentIds)
+        {
+            if (ClassId <= 0 || StudentIds == null || !StudentIds.Any())
+            {
+                TempData["ErrorMessage"] = "Vui lòng chọn ít nhất một sinh viên để ghi danh.";
+                return RedirectToAction(nameof(ClassStudents), new { id = ClassId });
+            }
+
+            var newEnrollments = new List<Enrollment>();
+
+            foreach (var studentId in StudentIds)
+            {
+                newEnrollments.Add(new Enrollment
+                {
+                    StudentId = studentId,
+                    ClassId = ClassId,
+                    EnrollmentDate = DateTime.Now,
+                    Status = "Enrolled" // Trạng thái mặc định
+                });
+            }
+
+            try
+            {
+                _context.Enrollments.AddRange(newEnrollments);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Đã ghi danh thành công {newEnrollments.Count} sinh viên vào lớp.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "Lỗi Database: Không thể ghi danh sinh viên (Có thể do trùng lặp hoặc lỗi FK).";
+            }
+            catch (Exception)
+            {
+                TempData["ErrorMessage"] = "Lỗi hệ thống khi ghi danh.";
+            }
+
+            return RedirectToAction(nameof(ClassStudents), new { id = ClassId });
+        }
+
+        // POST: /Admin/UnenrollStudent/123?classId=5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnenrollStudent(int id, int classId)
+        {
+            // ID ở đây là EnrollmentId
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.EnrollmentId == id && e.ClassId == classId);
+
+            if (enrollment == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy ghi danh này để hủy.";
+                return RedirectToAction(nameof(ClassStudents), new { id = classId });
+            }
+
+            try
+            {
+                // 🚨 Quan trọng: Xóa tất cả điểm số liên quan trước (nếu không có Cascade Delete)
+                var scores = await _context.Scores.Where(s => s.EnrollmentId == id).ToListAsync();
+                _context.Scores.RemoveRange(scores);
+
+                // Sau đó xóa Enrollment
+                _context.Enrollments.Remove(enrollment);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Đã hủy ghi danh sinh viên thành công.";
+            }
+            catch (Exception)
+            {
+                TempData["ErrorMessage"] = "Lỗi hệ thống khi hủy ghi danh.";
+            }
+
+            return RedirectToAction(nameof(ClassStudents), new { id = classId });
+        }
+        
+        // POST: /Admin/UpdateScore
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateScore(UpdateScoreViewModel model)
+        {
+            if (!ModelState.IsValid || model.Scores == null || !model.Scores.Any())
+            {
+                TempData["ErrorMessage"] = "Dữ liệu điểm không hợp lệ.";
+                return RedirectToAction(nameof(ClassStudents), new { id = model.ClassId });
+            }
+
+            try
+            {
+                foreach (var scoreInput in model.Scores)
+                {
+                    // Kiểm tra: Điểm này đã tồn tại chưa? (ScoreId > 0 nghĩa là đã tồn tại)
+                    if (scoreInput.ScoreId > 0)
+                    {
+                        // 1. Cập nhật điểm đã tồn tại
+                        var existingScore = await _context.Scores.FindAsync(scoreInput.ScoreId);
+                        if (existingScore != null)
+                        {
+                            existingScore.ScoreValue = scoreInput.ScoreValue;
+                            _context.Scores.Update(existingScore);
+                        }
+                    }
+                    else
+                    {
+                        // 2. Thêm điểm mới
+                        var newScore = new Score
+                        {
+                            EnrollmentId = model.EnrollmentId,
+                            ScoreTypeId = scoreInput.ScoreTypeId,
+                            ScoreValue = scoreInput.ScoreValue,
+                            
+                        };
+                        _context.Scores.Add(newScore);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Cập nhật điểm thành công!";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi lưu điểm: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(ClassStudents), new { id = model.ClassId });
+        }
+
         // GET: /Admin/ClassSchedule/5
         public async Task<IActionResult> ClassSchedule(int id)
         {
@@ -588,9 +767,24 @@ namespace StudentManagement.Controllers
                 try
                 {
                     _context.Add(newCourse);
+                    await _context.SaveChangesAsync(); // LƯU để lấy newCourse.CourseId
+
+                    // 🚨 TỰ ĐỘNG TẠO LỚP HỌC MẶC ĐỊNH
+                    var defaultClass = new Class
+                    {
+                        CourseId = newCourse.CourseId, // Lấy ID khóa học vừa tạo
+                        ClassCode = newCourse.CourseCode + "-K01",
+                        ClassName = newCourse.CourseName + " - Lớp Mặc Định",
+                        MaxStudents = 25,
+                        TeacherId = null // Chưa phân công
+                    };
+                    _context.Classes.Add(defaultClass);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Đã tạo khóa học **{newCourse.CourseName}** thành công.";
-                    return RedirectToAction(nameof(Courses));
+
+                    TempData["SuccessMessage"] = $"Đã tạo khóa học **{newCourse.CourseName}** và một Lớp học mặc định thành công.";
+
+                    // CHUYỂN HƯỚNG ĐẾN TRANG QUẢN LÝ LỚP HỌC
+                    return RedirectToAction(nameof(Classes)); // Chuyển hướng đến /Admin/Classes
                 }
                 catch (DbUpdateException)
                 {
@@ -717,12 +911,12 @@ namespace StudentManagement.Controllers
             return View(users);
         }
         [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
-{
-    // Giả định: 
-    // Student RoleId = 3 
-    // Teacher RoleId = 2
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
+    {
+        // Giả định: 
+        // Student RoleId = 3 
+        // Teacher RoleId = 2
 
     // 1. KIỂM TRA VALIDATION CHUNG (Mật khẩu, Trùng lặp User)
     if (model.Password != model.ConfirmPassword)
@@ -821,17 +1015,17 @@ public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
         }
     }
 
-    // Nếu có lỗi, tải lại dữ liệu cho form và trả về View
-    // Bạn cần tải lại danh sách Roles, Statuses và Users cho View Users
-    ViewBag.Roles = await _context.Roles.ToListAsync();
-    ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
-    var usersList = await _context.Users.Include(u => u.Role).ToListAsync();
+        // Nếu có lỗi, tải lại dữ liệu cho form và trả về View
+        // Bạn cần tải lại danh sách Roles, Statuses và Users cho View Users
+        ViewBag.Roles = await _context.Roles.ToListAsync();
+        ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+        var usersList = await _context.Users.Include(u => u.Role).ToListAsync();
 
-    // Tải lại dữ liệu form đã nhập (nếu View hỗ trợ Model Binding cho ViewModel)
-    ViewBag.InputModel = model; 
+        // Tải lại dữ liệu form đã nhập (nếu View hỗ trợ Model Binding cho ViewModel)
+        ViewBag.InputModel = model; 
     
-    return View("Users", usersList);
-}
+        return View("Users", usersList);
+    }
 
         //[HttpPost]
         //[ValidateAntiForgeryToken]
@@ -993,6 +1187,7 @@ public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
 
         // B. Action `EditUser` (POST)
         // POST: /Admin/EditUser/5
+        // POST: /Admin/EditUser/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         // Chỉ bind các trường được phép chỉnh sửa
@@ -1000,31 +1195,53 @@ public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
         {
             if (UserId != userToUpdate.UserId) return NotFound();
 
-            // Chúng ta không cho phép chỉnh sửa mật khẩu qua form này (dùng action riêng)
-            // Và không cho phép chỉnh sửa DateCreated
+            // 1. Loại bỏ các trường không được bind
             ModelState.Remove("PasswordHash");
             ModelState.Remove("DateCreated");
 
             if (ModelState.IsValid)
             {
+                // 🚨 Tải Entity gốc (User) VÀ Entity liên quan (Student)
+                var originalUser = await _context.Users
+                    .AsNoTracking() // Tắt theo dõi cho User gốc
+                    .FirstOrDefaultAsync(u => u.UserId == UserId);
+
+                // Tải Student liên quan (nếu User là Student)
+                var studentToUpdate = await _context.Students.FirstOrDefaultAsync(s => s.UserId == UserId);
+
+                if (originalUser == null) return NotFound();
+
                 try
                 {
-                    // Lấy User gốc từ DB để giữ lại PasswordHash và DateCreated
-                    var originalUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == UserId);
-                    if (originalUser == null) return NotFound();
-
-                    // Cập nhật các trường được thay đổi
+                    // 2. Cập nhật các trường User
                     userToUpdate.PasswordHash = originalUser.PasswordHash; // Giữ lại mật khẩu cũ
-                    userToUpdate.DateCreated = originalUser.DateCreated;   // Giữ lại ngày tạo
+                    userToUpdate.DateCreated = originalUser.DateCreated;    // Giữ lại ngày tạo
 
+                    // 3. ĐỒNG BỘ DỮ LIỆU SANG BẢNG STUDENT (NẾU CÓ)
+                    if (studentToUpdate != null)
+                    {
+                        // Chỉ đồng bộ các trường được chỉnh sửa chung
+                        studentToUpdate.FullName = userToUpdate.FullName;
+                        studentToUpdate.Email = userToUpdate.Email;
+                        studentToUpdate.PhoneNumber = userToUpdate.PhoneNumber;
+
+                        // Gắn cờ Modified cho Student để đảm bảo nó được cập nhật
+                        _context.Entry(studentToUpdate).State = EntityState.Modified;
+                    }
+
+                    // 4. Cập nhật User
                     _context.Update(userToUpdate);
+
+                    // 5. Lưu tất cả thay đổi (User và Student)
                     await _context.SaveChangesAsync();
+
                     TempData["SuccessMessage"] = $"Đã cập nhật thông tin người dùng **{userToUpdate.Username}** thành công.";
                 }
                 catch (DbUpdateException)
                 {
                     TempData["ErrorMessage"] = "Cập nhật thất bại. Username hoặc Email có thể đã bị trùng.";
                 }
+
                 return RedirectToAction(nameof(Users));
             }
 

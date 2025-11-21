@@ -1,16 +1,14 @@
 ﻿@model StudentManagement.Models.Student
 @{
-    ViewData["Title"] = "Chỉnh Sửa Sinh Viên";
+    ViewData["Title"] = "Chỉnh Sửa Thông Tin Cá Nhân";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 
-    // Chuẩn bị cho DateOnly
-    string dateOfBirthString = Model.DateOfBirth.HasValue
-        ? Model.DateOfBirth.Value.ToString("yyyy-MM-dd")
-        : "";
+   
 }
 
 <div class="dashboard-header">
-    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Sinh Viên: @Model.FullName</h1>
+    <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Hồ Sơ: @Model.FullName</h1>
+    <p class="text-muted">Các thông tin chung (Họ tên, Email) được quản lý tại trang Người dùng.</p>
 </div>
 
 <div class="card shadow mb-4">
@@ -18,46 +16,34 @@
         <form asp-action="EditStudent" asp-controller="Admin" method="post">
             @Html.AntiForgeryToken()
 
-            
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-            
             <input type="hidden" asp-for="StudentId" />
-            <input type="hidden" asp-for="UserId" /> 
+            <input type="hidden" asp-for="UserId" />
+            <input type="date" asp-for="DateOfBirth" class="form-control" />
 
-            <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> I. Thông tin Cá nhân & Học vụ</h6>
+            <h6 class="mb-3 text-primary"><i class="fas fa-id-card"></i> I. Thông tin Cơ bản</h6>
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <label asp-for="StudentCode" class="form-label">Mã SV</label>
                     <input asp-for="StudentCode" class="form-control" required />
                     <span asp-validation-for="StudentCode" class="text-danger"></span>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="FullName" class="form-label">Họ và Tên</label>
-                    <input asp-for="FullName" class="form-control" required />
-                    <span asp-validation-for="FullName" class="text-danger"></span>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label asp-for="StatusId" class="form-label">Trạng Thái</label>
-                    <select asp-for="StatusId" class="form-select" required>
-                        <option value="">-- Chọn trạng thái --</option>
-                        @if (ViewBag.StudentStatuses is List<StudentManagement.Models.StudentStatus> statuses)
-                        {
-                            @foreach (var status in statuses)
-                            {
-                                <option value="@status.StatusId" selected="@(Model.StatusId == status.StatusId)">@status.StatusName</option>
-                            }
-                        }
-                    </select>
-                    <span asp-validation-for="StatusId" class="text-danger"></span>
+
+                
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Họ và Tên (Từ User)</label>
+                    <input type="text" value="@Model.FullName" class="form-control" readonly />
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label asp-for="DateOfBirth" class="form-label">Ngày Sinh</label>
+
                     
-                    <input type="date" name="DateOfBirth" value="@dateOfBirthString" class="form-control" />
+                    <input type="date" asp-for="DateOfBirth" class="form-control" />
+
                     <span asp-validation-for="DateOfBirth" class="text-danger"></span>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -76,19 +62,30 @@
                 </div>
             </div>
 
-            <h6 class="mb-3 text-primary mt-4"><i class="fas fa-address-book"></i> II. Thông tin Liên hệ (User)</h6>
+            <h6 class="mb-3 text-primary mt-4"><i class="fas fa-address-book"></i> II. Trạng Thái & Liên hệ </h6>
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Email</label>
-                    
-                    <input name="Email" value="@(ViewData.ModelState["Email"]?.RawValue ?? Model.User?.Email)" class="form-control" required />
-                    <span class="text-danger" data-valmsg-for="Email"></span>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="StatusId" class="form-label">Trạng Thái</label>
+                    <select asp-for="StatusId" class="form-select" required>
+                        <option value="">-- Chọn trạng thái --</option>
+                        @if (ViewBag.StudentStatuses is List<StudentManagement.Models.StudentStatus> statuses)
+                        {
+                            @foreach (var status in statuses)
+                            {
+                                <option value="@status.StatusId" selected="@(Model.StatusId == status.StatusId)">@status.StatusName</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="StatusId" class="text-danger"></span>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Số Điện Thoại</label>
-                    
-                    <input name="PhoneNumber" value="@(ViewData.ModelState["PhoneNumber"]?.RawValue ?? Model.User?.PhoneNumber)" class="form-control" />
-                    <span class="text-danger" data-valmsg-for="PhoneNumber"></span>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Email (User)</label>
+                    <input type="email" value="@Model.User?.Email" class="form-control" readonly />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Số ĐT (User)</label>
+                    <input type="tel" value="@Model.User?.PhoneNumber" class="form-control" readonly />
                 </div>
             </div>
 

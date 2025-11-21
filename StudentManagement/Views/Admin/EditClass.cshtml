@@ -3,10 +3,10 @@
     ViewData["Title"] = "Chỉnh Sửa Lớp Học";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 
-    var courses = ViewBag.Courses as List<StudentManagement.Models.Course>;
-    var teachers = ViewBag.Teachers as List<StudentManagement.Models.Teacher>;
+    
 }
 
+  
 <div class="dashboard-header">
     <h1 class="page-title"><i class="fas fa-edit"></i> Chỉnh Sửa Lớp Học: @Model.ClassName</h1>
 </div>
@@ -17,6 +17,7 @@
             @Html.AntiForgeryToken()
             @* Trường ẩn ClassId để nhận biết lớp học đang chỉnh sửa *@
             <input type="hidden" asp-for="ClassId" />
+            <input type="hidden" asp-for="CourseId" />
 
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -34,22 +35,17 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label asp-for="CourseId" class="form-label">Khóa Học <span class="text-danger">*</span></label>
-                    <select asp-for="CourseId" class="form-select" required>
-                        @foreach (var course in courses)
-                        {
-                            <option value="@course.CourseId">@course.CourseName</option>
-                        }
+                    
+                    <select asp-for="CourseId" class="form-select" asp-items="ViewBag.Courses" required>
                     </select>
                     <span asp-validation-for="CourseId" class="text-danger"></span>
                 </div>
+
                 <div class="col-md-6 mb-3">
                     <label asp-for="TeacherId" class="form-label">Giảng Viên</label>
-                    <select asp-for="TeacherId" class="form-select">
+                   
+                    <select asp-for="TeacherId" class="form-select" asp-items="ViewBag.Teachers">
                         <option value="">-- Chọn giảng viên --</option>
-                        @foreach (var teacher in teachers)
-                        {
-                            <option value="@teacher.TeacherId">@teacher.FirstName @teacher.LastName</option>
-                        }
                     </select>
                     <span asp-validation-for="TeacherId" class="text-danger"></span>
                 </div>
