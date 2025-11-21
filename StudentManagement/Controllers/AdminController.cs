@@ -48,14 +48,15 @@ namespace StudentManagement.Controllers
                 .Include(s => s.User)
                 .Include(s => s.Status)
                 .ToListAsync();
+ 
 
             return View(students);
         }
-
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateStudent(string StudentCode,string Username,string Password,string ConfirmPassword,string FullName,DateTime? DateOfBirth,string Gender,
-        string Email,string PhoneNumber,string Address,int StatusId)
+        public async Task<IActionResult> CreateStudent(string StudentCode, string Username, string Password, string ConfirmPassword, string FullName, DateTime? DateOfBirth, string Gender,
+        string Email, string PhoneNumber, string Address, int StatusId)
         {
             // 1. KIỂM TRA VALIDATION CƠ BẢN
             if (Password != ConfirmPassword)
@@ -134,6 +135,156 @@ namespace StudentManagement.Controllers
             }
         }
 
+        // GET: Admin/StudentDetails/5 (hoặc Students/Details/5)
+        public async Task<IActionResult> StudentDetails(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            // Tải dữ liệu Student và các thuộc tính liên quan (User, Status)
+            var student = await _context.Students
+                .Include(s => s.User)
+                .Include(s => s.Status)
+                .FirstOrDefaultAsync(m => m.StudentId == id);
+
+            if (student == null)
+            {
+                return NotFound();
+            }
+
+            return View(student);
+        }
+
+        // GET: Admin/EditStudent/5
+        public async Task<IActionResult> EditStudent(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            // Tải Student và User liên quan
+            var student = await _context.Students
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(m => m.StudentId == id);
+
+            if (student == null)
+            {
+                return NotFound();
+            }
+
+            // Chuẩn bị dữ liệu cho Dropdown Trạng thái
+            ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+
+            // Gán Student.User.Email và Student.User.PhoneNumber cho các trường trong form
+            // Vì View StudentDetails/Edit sẽ cần các trường này để hiển thị/chỉnh sửa
+
+            return View(student);
+        }
+
+        // POST: Admin/EditStudent/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditStudent(int id,
+            [Bind("StudentId, StudentCode, FullName, DateOfBirth, Gender, Address, StatusId, UserId, Email, PhoneNumber")] Student studentInput)
+        {
+            // Kiểm tra ID
+            if (id != studentInput.StudentId)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                // 1. Tải Entity gốc từ DB
+                var studentToUpdate = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
+
+                if (studentToUpdate == null)
+                {
+                    return NotFound();
+                }
+
+                try
+                {
+                    // 2. Cập nhật thuộc tính Student
+                    studentToUpdate.StudentCode = studentInput.StudentCode;
+                    studentToUpdate.FullName = studentInput.FullName;
+                    // ... (Cập nhật các trường Student khác) ...
+                    studentToUpdate.StatusId = studentInput.StatusId;
+
+                    // 3. Cập nhật thuộc tính User (Bắt buộc vì Email/Phone nằm trong Users)
+                    if (studentToUpdate.User != null)
+                    {
+                        studentToUpdate.User.Email = studentInput.Email;
+                        studentToUpdate.User.PhoneNumber = studentInput.PhoneNumber;
+                        // Nếu Username/Password thay đổi, xử lý logic riêng ở đây.
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = $"Cập nhật sinh viên {studentToUpdate.FullName} thành công!";
+
+                    // Quay về trang danh sách sinh viên
+                    return RedirectToAction("Students");
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // ... (Xử lý lỗi concurrency)
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Lỗi hệ thống khi cập nhật: {ex.Message}");
+                }
+            }
+
+            // Nếu có lỗi, tải lại trạng thái và hiển thị lại form
+            ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
+            return View(studentInput);
+        }
+
+        // POST: Admin/DeleteStudent/5
+        [HttpPost]
+        public async Task<IActionResult> DeleteStudent(int id)
+        {
+            var student = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
+
+            if (student == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy sinh viên cần xóa." });
+            }
+
+            // ⚠️ Kiểm tra các ràng buộc trước khi xóa
+            // Ví dụ: Kiểm tra sinh viên còn Enrollment không
+            var hasEnrollments = await _context.Enrollments.AnyAsync(e => e.StudentId == id);
+
+            if (hasEnrollments)
+            {
+                return Json(new { success = false, message = "Không thể xóa sinh viên này vì họ còn ghi danh trong các lớp học." });
+            }
+
+            // Bắt đầu giao dịch xóa
+            try
+            {
+                // Xóa bản ghi Student
+                _context.Students.Remove(student);
+
+                // Xóa bản ghi User liên quan (Nếu bạn muốn xóa tài khoản đăng nhập)
+                if (student.User != null)
+                {
+                    _context.Users.Remove(student.User);
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"Đã xóa sinh viên {student.FullName} thành công." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi hệ thống khi xóa: {ex.Message}" });
+            }
+        }
 
 
         // Classes Management

@@ -1,0 +1,87 @@
+﻿@model StudentManagement.Models.Student
+@{
+    ViewData["Title"] = "Chi Tiết Sinh Viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-header">
+    <h1 class="page-title"><i class="fas fa-info-circle"></i> Chi Tiết Sinh Viên: @Model.FullName</h1>
+    <div class="header-actions">
+        <a asp-action="EditStudent" asp-route-id="@Model.StudentId" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Chỉnh Sửa
+        </a>
+        <a asp-action="Students" class="btn btn-secondary">
+            <i class="fas fa-list"></i> Về Danh Sách
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-id-card"></i> Thông Tin Cá Nhân & Học Vụ</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row detail-list">
+                    <dt class="col-sm-4">Mã Sinh Viên:</dt>
+                    <dd class="col-sm-8"><strong>@Model.StudentCode</strong></dd>
+
+                    <dt class="col-sm-4">Họ và Tên:</dt>
+                    <dd class="col-sm-8">@Model.FullName</dd>
+
+                    <dt class="col-sm-4">Ngày Sinh:</dt>
+                    <dd class="col-sm-8">@Model.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+
+                    <dt class="col-sm-4">Giới Tính:</dt>
+                    <dd class="col-sm-8">@Model.Gender</dd>
+
+                    <dt class="col-sm-4">Địa Chỉ:</dt>
+                    <dd class="col-sm-8">@Model.Address</dd>
+
+                    <dt class="col-sm-4">Trạng Thái:</dt>
+                    <dd class="col-sm-8">
+                        @{
+                            var statusName = Model.Status?.StatusName ?? "Không xác định";
+                            var badgeClass = statusName == "Đang học" ? "bg-success" :
+                            statusName == "Bảo lưu" ? "bg-warning" :
+                            statusName == "Tốt nghiệp" ? "bg-info" :
+                            "bg-secondary";
+                        }
+                        <span class="badge @badgeClass">@statusName</span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-lock"></i> Thông Tin Tài Khoản</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.User != null)
+                {
+                    <dl class="row detail-list">
+                        <dt class="col-sm-4">Username:</dt>
+                        <dd class="col-sm-8">@Model.User.Username</dd>
+
+                        <dt class="col-sm-4">Email:</dt>
+                        <dd class="col-sm-8">@Model.User.Email</dd>
+
+                        <dt class="col-sm-4">Điện Thoại:</dt>
+                        <dd class="col-sm-8">@Model.User.PhoneNumber</dd>
+
+                        <dt class="col-sm-4">Ngày Tạo:</dt>
+                        <dd class="col-sm-8">@Model.User.DateCreated.ToString("dd/MM/yyyy")</dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="text-danger">Không tìm thấy thông tin tài khoản (User) liên kết.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
