@@ -1570,6 +1570,36 @@ namespace StudentManagement.Controllers
 
             return Json(new { success = true, history = historyData });
         }
+        // GET: /Admin/PrintReceipt/5
+        public async Task<IActionResult> PrintReceipt(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var tuition = await _context.Tuitions
+                .Where(t => t.TuitionId == id)
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Student)
+                .Include(t => t.Enrollment)
+                    .ThenInclude(e => e.Class)
+                        .ThenInclude(c => c.Course)
+                .Include(t => t.Receipts)
+                    .ThenInclude(r => r.Cashier)
+                .FirstOrDefaultAsync();
+
+            if (tuition == null) return NotFound();
+
+            var viewModel = new ReceiptViewModel
+            {
+                Tuition = tuition,
+            };
+
+            return new Rotativa.AspNetCore.ViewAsPdf("ReceiptTemplate", viewModel)
+            {
+                FileName = $"BienLai_{tuition.Enrollment.Student.StudentCode}_{DateTime.Now:yyyyMMdd}.pdf",
+                PageOrientation = Rotativa.AspNetCore.Options.Orientation.Portrait,
+                PageSize = Rotativa.AspNetCore.Options.Size.A5
+            };
+        }
 
         
         public async Task<IActionResult> Notifications(string filterDate, string sortBy)
