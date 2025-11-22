@@ -1474,10 +1474,6 @@ namespace StudentManagement.Controllers
             }
         }
 
-        public IActionResult PrintReport()
-        {
-            return RedirectToAction(nameof(Index)); 
-        }
 
 
         [HttpPost]
@@ -1600,6 +1596,10 @@ namespace StudentManagement.Controllers
             }).ToList();
 
             return Json(new { success = true, history = historyData });
+        }
+        public async Task<IActionResult> PrintReport()
+        {
+            return await ExportReportsPdf();
         }
         // GET: /Admin/PrintReceipt/5
         public async Task<IActionResult> PrintReceipt(int? id)
