@@ -50,7 +50,7 @@ namespace StudentManagement.Controllers
         // Đặt trong Controller
         private async Task<List<Student>> GetStudentsForView()
         {
-            // Đảm bảo dữ liệu không bao giờ NULL, và có đủ includes
+            
             return await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Status)
@@ -69,16 +69,16 @@ namespace StudentManagement.Controllers
                                              string Address, int StatusId)
         {
             var studentFullName = FullName;
-            // 1. KIỂM TRA VALIDATION CƠ BẢN
+            
             if (Password != ConfirmPassword)
             {
                 TempData["ErrorMessage"] = "Mật khẩu và Xác nhận Mật khẩu không khớp.";
-                // Tái tạo lại dữ liệu cho form (tùy chọn)
+               
                 ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
-                return View("Students"); // Trả về lại View danh sách sinh viên
+                return View("Students");
             }
 
-            // Kiểm tra trùng lặp (ví dụ: Username và Email)
+            
             if (await _context.Users.AnyAsync(u => u.Username == Username || u.Email == Email))
             {
                 TempData["ErrorMessage"] = "Username hoặc Email đã tồn tại trong hệ thống.";
@@ -86,7 +86,7 @@ namespace StudentManagement.Controllers
                 return View("Students");
             }
 
-            // Kiểm tra trùng lặp Mã SV
+            
             if (await _context.Students.AnyAsync(s => s.StudentCode == StudentCode))
             {
                 TempData["ErrorMessage"] = "Mã sinh viên đã tồn tại.";
@@ -94,17 +94,17 @@ namespace StudentManagement.Controllers
                 return View("Students");
             }
 
-            // 2. TẠO TÀI KHOẢN USER
+            
             try
             {
-                // Giả sử RoleId cho Sinh viên là 3 (theo database bạn cung cấp)
+                
                 int studentRoleId = 3;
 
                 var newUser = new User
                 {
                     RoleId = studentRoleId,
                     Username = Username,
-                    PasswordHash = Password, // Lưu trữ Tạm thời (nên dùng thư viện Hashing thực tế!)
+                    PasswordHash = Password, 
                     FullName = studentFullName,
                     Email = Email,
                     PhoneNumber = PhoneNumber,
@@ -112,13 +112,13 @@ namespace StudentManagement.Controllers
                     DateCreated = DateTime.Now
                 };
                 _context.Users.Add(newUser);
-                // Lưu trước để lấy UserId (Id là Auto-Increment)
+                
                 await _context.SaveChangesAsync();
 
-                // 3. TẠO THÔNG TIN SINH VIÊN
+                
                 var newStudent = new Student
                 {
-                    UserId = newUser.UserId, // Gán UserId vừa tạo
+                    UserId = newUser.UserId, 
                     StatusId = StatusId,
                     StudentCode = StudentCode,
                     FullName = studentFullName,
@@ -130,7 +130,7 @@ namespace StudentManagement.Controllers
                 };
                 _context.Students.Add(newStudent);
 
-                // 4. LƯU THAY ĐỔI CUỐI CÙNG
+                
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = $"Đã thêm sinh viên {FullName} ({StudentCode}) thành công!";
@@ -138,8 +138,7 @@ namespace StudentManagement.Controllers
             }
             catch (Exception ex)
             {
-                // Ghi log lỗi vào hệ thống log
-                // _logger.LogError(ex, "Lỗi khi tạo sinh viên mới.");
+                
 
                 TempData["ErrorMessage"] = "Lỗi hệ thống: Không thể thêm sinh viên. Vui lòng kiểm tra log.";
                 return RedirectToAction("Students");
@@ -154,7 +153,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Tải dữ liệu Student và các thuộc tính liên quan (User, Status)
+            
             var student = await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Status)
@@ -176,7 +175,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Tải Student và BẮT BUỘC Include User (cho Email/Phone)
+            
             var student = await _context.Students
                 .Include(s => s.User)
                 .FirstOrDefaultAsync(m => m.StudentId == id);
@@ -186,7 +185,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Chuẩn bị dữ liệu cho Dropdown Trạng thái
+            
             ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
 
             return View(student);
@@ -201,7 +200,7 @@ namespace StudentManagement.Controllers
 
             if (id != studentInput.StudentId) return NotFound();
 
-            // 1. Tải Entity gốc KHÔNG theo dõi (AsNoTracking) để tham khảo
+            
             var originalStudent = await _context.Students
                 .AsNoTracking()
                 .Include(s => s.User)
@@ -209,47 +208,45 @@ namespace StudentManagement.Controllers
 
             if (originalStudent == null) return NotFound();
 
-            // 2. Gán các trường BẮT BUỘC KHÔNG CHỈNH SỬA TỪ GỐC VÀO studentInput
+            
             studentInput.FullName = originalStudent.FullName;
             studentInput.Email = originalStudent.Email;
             studentInput.PhoneNumber = originalStudent.PhoneNumber;
             studentInput.UserId = originalStudent.UserId;
 
-            // Kiểm tra tính hợp lệ của Model
+            
             if (!ModelState.IsValid)
             {
-                // Nếu Validation thất bại, tải lại ViewBag và trả về View
+                
                 ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
                 return View(studentInput);
             }
 
             try
             {
-                // 3. Tải các Entity gốc VÀO TRACKING CONTEXT
+                
                 var studentToTrack = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.StudentId == id);
 
                 if (studentToTrack == null) return NotFound();
 
-                // 4. ÁP DỤNG THAY ĐỔI VÀO ENTITY ĐANG ĐƯỢC TRACK
-                // Cập nhật Student (chỉ các trường học vụ)
+                
                 studentToTrack.StudentCode = studentInput.StudentCode;
                 studentToTrack.DateOfBirth = studentInput.DateOfBirth;
                 studentToTrack.Gender = studentInput.Gender;
                 studentToTrack.Address = studentInput.Address;
                 studentToTrack.StatusId = studentInput.StatusId;
 
-                // Cập nhật User (Đảm bảo các trường User.FullName/Email/Phone không bị mất)
+                
                 if (studentToTrack.User != null)
                 {
                     studentToTrack.User.FullName = originalStudent.FullName;
                     studentToTrack.User.Email = originalStudent.Email;
                     studentToTrack.User.PhoneNumber = originalStudent.PhoneNumber;
 
-                    // Gắn cờ cho User (Dù không thay đổi, việc này đôi khi cần thiết để EF không bỏ qua User)
+                    
                     _context.Entry(studentToTrack.User).State = EntityState.Modified;
                 }
 
-                // 5. Lưu thay đổi
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = $"Cập nhật hồ sơ sinh viên {originalStudent.FullName} thành công!";
@@ -257,7 +254,7 @@ namespace StudentManagement.Controllers
             }
             catch (DbUpdateException ex)
             {
-                // ... (Xử lý lỗi database) ...
+                
                 ModelState.AddModelError("", "Lỗi cập nhật database. Mã SV có thể đã tồn tại.");
             }
             catch (Exception ex)
@@ -265,7 +262,7 @@ namespace StudentManagement.Controllers
                 ModelState.AddModelError("", $"Lỗi chung: {ex.Message}");
             }
 
-            // Nếu lỗi xảy ra trong try/catch, tải lại ViewBag và trả về View
+            
             ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
             return View(studentInput);
         }
@@ -280,8 +277,7 @@ namespace StudentManagement.Controllers
                 return Json(new { success = false, message = "Không tìm thấy sinh viên cần xóa." });
             }
 
-            // ⚠️ Kiểm tra các ràng buộc trước khi xóa
-            // Ví dụ: Kiểm tra sinh viên còn Enrollment không
+            
             var hasEnrollments = await _context.Enrollments.AnyAsync(e => e.StudentId == id);
 
             if (hasEnrollments)
@@ -289,13 +285,13 @@ namespace StudentManagement.Controllers
                 return Json(new { success = false, message = "Không thể xóa sinh viên này vì họ còn ghi danh trong các lớp học." });
             }
 
-            // Bắt đầu giao dịch xóa
+            
             try
             {
                 // Xóa bản ghi Student
                 _context.Students.Remove(student);
 
-                // Xóa bản ghi User liên quan (Nếu bạn muốn xóa tài khoản đăng nhập)
+                
                 if (student.User != null)
                 {
                     _context.Users.Remove(student.User);
@@ -365,22 +361,21 @@ namespace StudentManagement.Controllers
         // GET: /Admin/GeneralSchedule
         public async Task<IActionResult> GeneralSchedule()
         {
-            // Lấy tất cả lịch học của tất cả các lớp
+            
             var allSchedules = await _context.ClassSchedules
                 .Include(cs => cs.Class)
-                    .ThenInclude(c => c.Course) // Bao gồm Khóa học
+                    .ThenInclude(c => c.Course) 
                 .Include(cs => cs.Class)
-                    .ThenInclude(c => c.Teacher) // Bao gồm Giảng viên
-                .Include(cs => cs.Room) // Bao gồm Phòng học
-                                        // Sắp xếp theo ngày trong tuần và giờ bắt đầu để dễ nhìn
+                    .ThenInclude(c => c.Teacher) 
+                .Include(cs => cs.Room) 
                 .OrderBy(cs => cs.Weekday)
                 .ThenBy(cs => cs.StartTime)
                 .ToListAsync();
 
-            // Model sẽ là IEnumerable<ClassSchedule>
+            
             return View(allSchedules);
         }
-        // Thêm Action Chi Tiết Lớp Học
+       
         public async Task<IActionResult> ClassDetails(int id)
         {
             if (id <= 0)
@@ -388,16 +383,16 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Lấy chi tiết lớp học cùng với tất cả các thông tin liên quan
+            
             var classItem = await _context.Classes
                 .Where(c => c.ClassId == id)
-                .Include(c => c.Course)             // Khóa học
-                .Include(c => c.Teacher)            // Giảng viên
-                .Include(c => c.ClassSchedules)     // Lịch học
-                    .ThenInclude(cs => cs.Room)     // Phòng học
-                .Include(c => c.Enrollments)        // Danh sách ghi danh
-                    .ThenInclude(e => e.Student)    // Thông tin sinh viên
-                        .ThenInclude(s => s.Status) // Trạng thái sinh viên
+                .Include(c => c.Course)             
+                .Include(c => c.Teacher)            
+                .Include(c => c.ClassSchedules)     
+                    .ThenInclude(cs => cs.Room)     
+                .Include(c => c.Enrollments)        
+                    .ThenInclude(e => e.Student)    
+                        .ThenInclude(s => s.Status) 
                 .FirstOrDefaultAsync();
 
             if (classItem == null)
@@ -414,7 +409,7 @@ namespace StudentManagement.Controllers
 
             var classItem = await _context.Classes
                 .Include(c => c.Course)
-                // Cần Include Teacher để lấy tên GV hiển thị trong form/header (nếu cần)
+                
                 .Include(c => c.Teacher)
                 .FirstOrDefaultAsync(m => m.ClassId == id);
 
@@ -422,7 +417,7 @@ namespace StudentManagement.Controllers
 
             ViewBag.Courses = new SelectList(_context.Courses, "CourseId", "CourseName", classItem.CourseId);
 
-            // 2. CHUẨN BỊ CHO GIẢNG VIÊN (SelectList)
+           
             var teachersList = await _context.Teachers
                 .Select(t => new { TeacherId = t.TeacherId, FullName = t.LastName + " " + t.FirstName + " (" + t.TeacherCode + ")" })
                 .ToListAsync();
@@ -439,10 +434,10 @@ namespace StudentManagement.Controllers
         {
             if (ClassId != classInput.ClassId) return NotFound();
 
-            // 1. Kiểm tra tính hợp lệ của Model
+            
             if (ModelState.IsValid)
             {
-                // 🚨 Tải Entity Gốc để Cập nhật An toàn
+               
                 var classToUpdate = await _context.Classes.FindAsync(ClassId);
                 if (classToUpdate == null)
                 {
@@ -452,15 +447,14 @@ namespace StudentManagement.Controllers
 
                 try
                 {
-                    // 2. Cập nhật thủ công các thuộc tính từ input (PHƯƠNG PHÁP AN TOÀN NHẤT)
-                    classToUpdate.TeacherId = classInput.TeacherId;   // Phân công GV
-                    classToUpdate.ClassName = classInput.ClassName;   // Tên lớp
-                    classToUpdate.MaxStudents = classInput.MaxStudents; // Sĩ số
-                    classToUpdate.ClassCode = classInput.ClassCode;   // Mã lớp
-                    classToUpdate.CourseId = classInput.CourseId;     // Khóa ngoại (Nếu được phép đổi)
+                   
+                    classToUpdate.TeacherId = classInput.TeacherId;   
+                    classToUpdate.ClassName = classInput.ClassName;   
+                    classToUpdate.MaxStudents = classInput.MaxStudents; 
+                    classToUpdate.ClassCode = classInput.ClassCode;   
+                    classToUpdate.CourseId = classInput.CourseId;     
 
-                    // 3. Lưu thay đổi
-                    // EF Core tự động tạo lệnh UPDATE chỉ cho các trường thực sự thay đổi
+                   
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = $"Đã cập nhật lớp **{classToUpdate.ClassName}** thành công.";
@@ -468,7 +462,7 @@ namespace StudentManagement.Controllers
                 }
                 catch (DbUpdateException ex)
                 {
-                    // Bắt lỗi trùng lặp Mã Lớp hoặc lỗi FK
+                    
                     TempData["ErrorMessage"] = "Cập nhật thất bại. Mã Lớp có thể đã bị trùng hoặc lỗi cơ sở dữ liệu.";
                 }
                 catch (Exception)
@@ -476,18 +470,18 @@ namespace StudentManagement.Controllers
                     TempData["ErrorMessage"] = "Lỗi hệ thống không xác định khi lưu.";
                 }
 
-                // Nếu có lỗi trong try/catch, chuyển hướng về trang danh sách
+                
                 return RedirectToAction(nameof(Classes));
             }
 
-            // 4. Nếu Model không hợp lệ (Validation Failed)
+            
             TempData["ErrorMessage"] = "Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại.";
 
-            // Tải lại ViewBag (SelectList) và trả về View
+            
             ViewBag.Courses = new SelectList(_context.Courses, "CourseId", "CourseName", classInput.CourseId);
             ViewBag.Teachers = new SelectList(_context.Teachers.Select(t => new { TeacherId = t.TeacherId, FullName = t.LastName + " " + t.FirstName + " (" + t.TeacherCode + ")" }), "TeacherId", "FullName", classInput.TeacherId);
 
-            return View(classInput); // Trả lại View với dữ liệu form đã nhập
+            return View(classInput); 
         }
         // GET: /Admin/ClassStudents/5
         public async Task<IActionResult> ClassStudents(int id)
@@ -497,7 +491,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // 1. Lấy thông tin lớp học (để hiển thị tiêu đề)
+            
             var classItem = await _context.Classes
                 .Include(c => c.Course)
                 .FirstOrDefaultAsync(c => c.ClassId == id);
@@ -507,24 +501,23 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // 2. Lấy danh sách ghi danh (Enrollments)
-            // Bao gồm cả thông tin Student, Status, và Scores/ScoreTypes
+           
             var enrollments = await _context.Enrollments
                 .Where(e => e.ClassId == id)
                 .Include(e => e.Student)
-                    .ThenInclude(s => s.Status) // Trạng thái sinh viên
+                    .ThenInclude(s => s.Status) 
                 .Include(e => e.Scores)
-                    .ThenInclude(s => s.ScoreType) // Loại điểm (Chuyên cần, Giữa kỳ...)
+                    .ThenInclude(s => s.ScoreType) 
                 .ToListAsync();
 
-            // 3. Đưa dữ liệu vào ViewModel hoặc ViewBag (Ở đây dùng ViewBag để đơn giản hóa)
+            
             ViewBag.ClassItem = classItem;
 
-            // 🚨 4. Tải danh sách sinh viên CHƯA ghi danh vào lớp này
+            
             var enrolledStudentIds = enrollments.Select(e => e.StudentId).ToList();
 
             var availableStudents = await _context.Students
-                .Where(s => !enrolledStudentIds.Contains(s.StudentId)) // Lọc ra những người đã ghi danh
+                .Where(s => !enrolledStudentIds.Contains(s.StudentId)) 
                 .Select(s => new SelectListItem
                 {
                     Value = s.StudentId.ToString(),
@@ -532,18 +525,18 @@ namespace StudentManagement.Controllers
                 })
                 .ToListAsync();
 
-            ViewBag.AvailableStudents = availableStudents; // Gán cho Modal
+            ViewBag.AvailableStudents = availableStudents; 
 
-            // 5. Đưa dữ liệu vào ViewModel hoặc ViewBag
+           
             ViewBag.ClassItem = classItem;
             ViewBag.ScoreTypes = await _context.ScoreTypes.OrderBy(st => st.ScoreTypeId).ToListAsync();
 
-            // 6. Đưa dữ liệu vào ViewModel hoặc ViewBag
+            
             ViewBag.ClassItem = classItem;
             ViewBag.AvailableStudents = availableStudents;
 
 
-            // Model sẽ là IEnumerable<Enrollment>
+            
             return View(enrollments);
 
 
@@ -568,7 +561,7 @@ namespace StudentManagement.Controllers
                     StudentId = studentId,
                     ClassId = ClassId,
                     EnrollmentDate = DateTime.Now,
-                    Status = "Enrolled" // Trạng thái mặc định
+                    Status = "Enrolled" 
                 });
             }
 
@@ -596,7 +589,7 @@ namespace StudentManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UnenrollStudent(int id, int classId)
         {
-            // ID ở đây là EnrollmentId
+            
             var enrollment = await _context.Enrollments
                 .FirstOrDefaultAsync(e => e.EnrollmentId == id && e.ClassId == classId);
 
@@ -608,11 +601,11 @@ namespace StudentManagement.Controllers
 
             try
             {
-                // 🚨 Quan trọng: Xóa tất cả điểm số liên quan trước (nếu không có Cascade Delete)
+                
                 var scores = await _context.Scores.Where(s => s.EnrollmentId == id).ToListAsync();
                 _context.Scores.RemoveRange(scores);
 
-                // Sau đó xóa Enrollment
+                
                 _context.Enrollments.Remove(enrollment);
                 await _context.SaveChangesAsync();
 
@@ -641,10 +634,10 @@ namespace StudentManagement.Controllers
             {
                 foreach (var scoreInput in model.Scores)
                 {
-                    // Kiểm tra: Điểm này đã tồn tại chưa? (ScoreId > 0 nghĩa là đã tồn tại)
+                    
                     if (scoreInput.ScoreId > 0)
                     {
-                        // 1. Cập nhật điểm đã tồn tại
+                        
                         var existingScore = await _context.Scores.FindAsync(scoreInput.ScoreId);
                         if (existingScore != null)
                         {
@@ -654,7 +647,7 @@ namespace StudentManagement.Controllers
                     }
                     else
                     {
-                        // 2. Thêm điểm mới
+                        
                         var newScore = new Score
                         {
                             EnrollmentId = model.EnrollmentId,
@@ -685,7 +678,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // 1. Lấy thông tin lớp học (để hiển thị tiêu đề và thông tin cơ bản)
+            
             var classItem = await _context.Classes
                 .Include(c => c.Course)
                 .Include(c => c.Teacher)
@@ -696,17 +689,16 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // 2. Lấy danh sách lịch học (ClassSchedules)
-            // Cần Include Room để lấy tên phòng học
+          
             var schedules = await _context.ClassSchedules
                 .Where(cs => cs.ClassId == id)
                 .Include(cs => cs.Room)
-                .OrderBy(cs => cs.Weekday) // Sắp xếp theo ngày trong tuần (có thể cần logic sắp xếp tùy chỉnh)
+                .OrderBy(cs => cs.Weekday) 
                 .ToListAsync();
 
-            // 3. Đưa dữ liệu vào ViewBag và View
+           
             ViewBag.ClassItem = classItem;
-            // Model sẽ là IEnumerable<ClassSchedule>
+            
             return View(schedules);
         }
         // ====================================================================
@@ -719,8 +711,7 @@ namespace StudentManagement.Controllers
         public async Task<IActionResult> DeleteClassConfirmed(int id)
         {
             var classItem = await _context.Classes
-                // Lớp học có thể liên kết với Enrollments, ClassSchedules, v.v.
-                // Cần đảm bảo CSDL có thiết lập CASCADE DELETE hoặc xóa thủ công các bản ghi con
+                
                 .FirstOrDefaultAsync(c => c.ClassId == id);
 
             if (classItem == null)
@@ -737,9 +728,9 @@ namespace StudentManagement.Controllers
             }
             catch (DbUpdateException ex)
             {
-                // Xử lý lỗi ràng buộc khóa ngoại (Foreign Key Constraint)
+               
                 TempData["ErrorMessage"] = "Xóa lớp thất bại. Lớp học này đang có sinh viên ghi danh hoặc lịch học liên quan. Cần xóa dữ liệu liên quan trước.";
-                // Bạn có thể log ex.Message ở đây để debug
+                
             }
 
             return RedirectToAction(nameof(Classes));
@@ -750,7 +741,7 @@ namespace StudentManagement.Controllers
         {
             var courses = await _context.Courses
             .Include(c => c.Classes)
-            .ThenInclude(cl => cl.Enrollments) // Cần Enrollments để tính Tổng Học Viên
+            .ThenInclude(cl => cl.Enrollments) 
             .ToListAsync();
 
             return View(courses);
@@ -760,30 +751,30 @@ namespace StudentManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCourse([Bind("CourseCode,CourseName,Description,Duration,TuitionFee,Credits")] Course newCourse)
         {
-            // ModelState.Remove("Classes"); // Không cần nếu không có thuộc tính Classes trong Bind
+            
 
             if (ModelState.IsValid)
             {
                 try
                 {
                     _context.Add(newCourse);
-                    await _context.SaveChangesAsync(); // LƯU để lấy newCourse.CourseId
+                    await _context.SaveChangesAsync(); 
 
-                    // 🚨 TỰ ĐỘNG TẠO LỚP HỌC MẶC ĐỊNH
+                    
                     var defaultClass = new Class
                     {
-                        CourseId = newCourse.CourseId, // Lấy ID khóa học vừa tạo
+                        CourseId = newCourse.CourseId, 
                         ClassCode = newCourse.CourseCode + "-K01",
                         ClassName = newCourse.CourseName + " - Lớp Mặc Định",
                         MaxStudents = 25,
-                        TeacherId = null // Chưa phân công
+                        TeacherId = null 
                     };
                     _context.Classes.Add(defaultClass);
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = $"Đã tạo khóa học **{newCourse.CourseName}** và một Lớp học mặc định thành công.";
 
-                    // CHUYỂN HƯỚNG ĐẾN TRANG QUẢN LÝ LỚP HỌC
+                    
                     return RedirectToAction(nameof(Classes)); // Chuyển hướng đến /Admin/Classes
                 }
                 catch (DbUpdateException)
@@ -799,11 +790,11 @@ namespace StudentManagement.Controllers
         // GET: /Admin/CourseStatistics
         public async Task<IActionResult> CourseStatistics()
         {
-            // Lấy tất cả Khóa học và các dữ liệu liên quan cần thiết cho thống kê
+            
             var coursesWithStats = await _context.Courses
                 .Include(c => c.Classes)
                     .ThenInclude(cl => cl.Enrollments)
-                .Select(c => new CourseStatViewModel // Sử dụng ViewModel để truyền dữ liệu thống kê
+                .Select(c => new CourseStatViewModel 
                 {
                     CourseId = c.CourseId,
                     CourseName = c.CourseName,
@@ -811,26 +802,25 @@ namespace StudentManagement.Controllers
                     TuitionFee = c.TuitionFee,
                     TotalClasses = c.Classes.Count,
                     TotalStudents = c.Classes.Sum(cl => cl.Enrollments.Count),
-                    // Tính toán doanh thu ước tính (Chỉ mang tính chất tham khảo: Học phí * Số HV)
+                   
                     EstimatedRevenue = c.TuitionFee * c.Classes.Sum(cl => cl.Enrollments.Count)
                 })
                 .OrderByDescending(vm => vm.TotalStudents)
                 .ToListAsync();
 
-            // Bạn cần định nghĩa class CourseStatViewModel trong thư mục Models/ViewModels
             return View(coursesWithStats);
         }
         // GET: /Admin/CourseDetails/5
         public async Task<IActionResult> CourseDetails(int id)
         {
             var course = await _context.Courses
-                .Include(c => c.Classes) // Có thể muốn xem các lớp đang mở
+                .Include(c => c.Classes) 
                     .ThenInclude(cl => cl.Teacher)
                 .FirstOrDefaultAsync(m => m.CourseId == id);
 
             if (course == null) return NotFound();
 
-            return View(course); // Cần tạo View CourseDetails.cshtml
+            return View(course); 
         }
         // GET: /Admin/EditCourse/5
         public async Task<IActionResult> EditCourse(int id)
@@ -838,7 +828,7 @@ namespace StudentManagement.Controllers
             var course = await _context.Courses.FindAsync(id);
             if (course == null) return NotFound();
 
-            return View(course); // Cần tạo View EditCourse.cshtml
+            return View(course);
         }
 
         // POST: /Admin/EditCourse/5
@@ -890,7 +880,7 @@ namespace StudentManagement.Controllers
             }
             catch (DbUpdateException)
             {
-                // Khóa học có thể còn lớp (Classes) liên quan.
+                
                 TempData["ErrorMessage"] = "Xóa khóa học thất bại. Vẫn còn lớp học đang sử dụng khóa học này. Vui lòng xóa các lớp liên quan trước.";
             }
 
@@ -905,7 +895,7 @@ namespace StudentManagement.Controllers
             .Include(u => u.Role)
             .ToListAsync();
 
-            // Lấy danh sách Roles cho Modal
+          
             ViewBag.Roles = await _context.Roles.ToListAsync();
 
             return View(users);
@@ -914,11 +904,7 @@ namespace StudentManagement.Controllers
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateUser(StudentUserTeacherViewModel model)
     {
-        // Giả định: 
-        // Student RoleId = 3 
-        // Teacher RoleId = 2
-
-    // 1. KIỂM TRA VALIDATION CHUNG (Mật khẩu, Trùng lặp User)
+     
     if (model.Password != model.ConfirmPassword)
     {
         ModelState.AddModelError("ConfirmPassword", "Mật khẩu và Xác nhận Mật khẩu không khớp.");
@@ -928,17 +914,17 @@ namespace StudentManagement.Controllers
         ModelState.AddModelError("Username", "Username hoặc Email đã tồn tại.");
     }
     
-    // Cần kiểm tra Model State VÀ logic nghiệp vụ khác
+   
     if (ModelState.IsValid)
     {
-        // 2. TẠO USER (Luôn thực hiện)
+       
         try
         {
             var newUser = new User
             {
                 RoleId = model.RoleId,
                 Username = model.Username,
-                PasswordHash = model.Password, // Cần HASH MẬT KHẨU
+                PasswordHash = model.Password, 
                 FullName = model.FullName,
                 Email = model.Email,
                 PhoneNumber = model.PhoneNumber,
@@ -946,15 +932,13 @@ namespace StudentManagement.Controllers
                 DateCreated = DateTime.Now
             };
             _context.Users.Add(newUser);
-            await _context.SaveChangesAsync(); // LƯU VÀ LẤY newUser.UserId
+            await _context.SaveChangesAsync(); 
 
-            // 3. RẼ NHÁNH TẠO HỒ SƠ CHI TIẾT
-            if (model.RoleId == 3) // VAI TRÒ LÀ STUDENT
+            if (model.RoleId == 3) 
             {
-                // Kiểm tra logic bắt buộc cho Student
                 if (string.IsNullOrEmpty(model.StudentCode) || model.StatusId <= 0)
                 {
-                    // Xóa User vừa tạo (HOẶC Xử lý Transaction)
+                    
                     _context.Users.Remove(newUser);
                     await _context.SaveChangesAsync();
                     ModelState.AddModelError("StudentCode", "Mã SV và Trạng thái là bắt buộc cho vai trò Sinh viên.");
@@ -974,7 +958,7 @@ namespace StudentManagement.Controllers
                     _context.Students.Add(newStudent);
                 }
             }
-            else if (model.RoleId == 2) // VAI TRÒ LÀ TEACHER
+            else if (model.RoleId == 2) 
             {
                 if (string.IsNullOrEmpty(model.TeacherCode))
                 {
@@ -985,23 +969,23 @@ namespace StudentManagement.Controllers
                 }
                 else
                 {
-                    // Giả định bạn có cách tách FirstName/LastName từ FullName
+                    
                     var newTeacher = new Teacher
                     {
                         UserId = newUser.UserId,
                         TeacherCode = model.TeacherCode,
-                        FirstName = model.FullName, // Cần Logic tách tên họ
+                        FirstName = model.FullName,
                         LastName = "", 
                         Specialization = model.Specialization,
                         Email = model.Email,
                         PhoneNumber = model.PhoneNumber,
-                        // ...
+                        
                     };
                     _context.Teachers.Add(newTeacher);
                 }
             }
             
-            // 4. LƯU CÁC THAY ĐỔI CỦA STUDENT/TEACHER (Chỉ nếu không có lỗi nghiệp vụ)
+           
             if (ModelState.IsValid)
             {
                 await _context.SaveChangesAsync(); 
@@ -1015,13 +999,11 @@ namespace StudentManagement.Controllers
         }
     }
 
-        // Nếu có lỗi, tải lại dữ liệu cho form và trả về View
-        // Bạn cần tải lại danh sách Roles, Statuses và Users cho View Users
+        
         ViewBag.Roles = await _context.Roles.ToListAsync();
         ViewBag.StudentStatuses = await _context.StudentStatuses.ToListAsync();
         var usersList = await _context.Users.Include(u => u.Role).ToListAsync();
 
-        // Tải lại dữ liệu form đã nhập (nếu View hỗ trợ Model Binding cho ViewModel)
         ViewBag.InputModel = model; 
     
         return View("Users", usersList);
@@ -1098,9 +1080,7 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // 2. Lấy thông tin chi tiết liên quan (Giảng viên hoặc Sinh viên)
-
-            // Nếu là Giảng viên
+           
             var teacherInfo = await _context.Teachers
                 .FirstOrDefaultAsync(t => t.UserId == id);
             if (teacherInfo != null)
@@ -1108,7 +1088,7 @@ namespace StudentManagement.Controllers
                 ViewBag.TeacherInfo = teacherInfo;
             }
 
-            // Nếu là Sinh viên
+           
             var studentInfo = await _context.Students
                 .Include(s => s.Status)
                 .FirstOrDefaultAsync(s => s.UserId == id);
@@ -1116,7 +1096,7 @@ namespace StudentManagement.Controllers
             {
                 ViewBag.StudentInfo = studentInfo;
 
-                // Tùy chọn: Lấy danh sách lớp mà sinh viên này đang học
+                
                 var enrollments = await _context.Enrollments
                     .Where(e => e.StudentId == studentInfo.StudentId)
                     .Include(e => e.Class)
@@ -1125,7 +1105,7 @@ namespace StudentManagement.Controllers
                 ViewBag.Enrollments = enrollments;
             }
 
-            // Model là đối tượng User
+            
             return View(user);
         }
         // GET: /Admin/EditUser/5
@@ -1139,14 +1119,14 @@ namespace StudentManagement.Controllers
 
             if (user == null) return NotFound();
 
-            // Lấy danh sách Roles cho dropdown
+           
             ViewBag.Roles = await _context.Roles.ToListAsync();
 
-            // Model sẽ là đối tượng User
+            
             return View(user);
         }
 
-        // Action cho việc đổi trạng thái (Kích hoạt/Vô hiệu hóa) - Được gọi bằng POST
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
       
@@ -1159,7 +1139,7 @@ namespace StudentManagement.Controllers
                 return RedirectToAction(nameof(Users));
             }
 
-            // Kiểm tra trạng thái hiện tại (sử dụng chuỗi tiếng Việt)
+            
             if (user.Status == "Active")
             {
                 user.Status = "Inactive";
@@ -1174,7 +1154,7 @@ namespace StudentManagement.Controllers
                 _context.Update(user);
                 await _context.SaveChangesAsync();
 
-                // Cập nhật thông báo phản hồi (sử dụng chuỗi tiếng Việt)
+                
                 TempData["SuccessMessage"] = $"Đã {(user.Status == "Active" ? "kích hoạt" : "vô hiệu hóa")} người dùng {user.Username} thành công.";
             }
             catch (DbUpdateException)
@@ -1187,52 +1167,52 @@ namespace StudentManagement.Controllers
 
         // B. Action `EditUser` (POST)
         // POST: /Admin/EditUser/5
-        // POST: /Admin/EditUser/5
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // Chỉ bind các trường được phép chỉnh sửa
+        
         public async Task<IActionResult> EditUser(int UserId, [Bind("UserId,RoleId,Username,FullName,Email,PhoneNumber,Status")] User userToUpdate)
         {
             if (UserId != userToUpdate.UserId) return NotFound();
 
-            // 1. Loại bỏ các trường không được bind
+            
             ModelState.Remove("PasswordHash");
             ModelState.Remove("DateCreated");
 
             if (ModelState.IsValid)
             {
-                // 🚨 Tải Entity gốc (User) VÀ Entity liên quan (Student)
+                
                 var originalUser = await _context.Users
-                    .AsNoTracking() // Tắt theo dõi cho User gốc
+                    .AsNoTracking() 
                     .FirstOrDefaultAsync(u => u.UserId == UserId);
 
-                // Tải Student liên quan (nếu User là Student)
+               
                 var studentToUpdate = await _context.Students.FirstOrDefaultAsync(s => s.UserId == UserId);
 
                 if (originalUser == null) return NotFound();
 
                 try
                 {
-                    // 2. Cập nhật các trường User
-                    userToUpdate.PasswordHash = originalUser.PasswordHash; // Giữ lại mật khẩu cũ
-                    userToUpdate.DateCreated = originalUser.DateCreated;    // Giữ lại ngày tạo
+                    
+                    userToUpdate.PasswordHash = originalUser.PasswordHash; 
+                    userToUpdate.DateCreated = originalUser.DateCreated;    
 
-                    // 3. ĐỒNG BỘ DỮ LIỆU SANG BẢNG STUDENT (NẾU CÓ)
+                    
                     if (studentToUpdate != null)
                     {
-                        // Chỉ đồng bộ các trường được chỉnh sửa chung
+                        
                         studentToUpdate.FullName = userToUpdate.FullName;
                         studentToUpdate.Email = userToUpdate.Email;
                         studentToUpdate.PhoneNumber = userToUpdate.PhoneNumber;
 
-                        // Gắn cờ Modified cho Student để đảm bảo nó được cập nhật
+                        
                         _context.Entry(studentToUpdate).State = EntityState.Modified;
                     }
 
-                    // 4. Cập nhật User
+                   
                     _context.Update(userToUpdate);
 
-                    // 5. Lưu tất cả thay đổi (User và Student)
+                    
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = $"Đã cập nhật thông tin người dùng **{userToUpdate.Username}** thành công.";
@@ -1245,7 +1225,7 @@ namespace StudentManagement.Controllers
                 return RedirectToAction(nameof(Users));
             }
 
-            // Nếu lỗi, load lại Roles và trả về View
+            
             ViewBag.Roles = await _context.Roles.ToListAsync();
             return View(userToUpdate);
         }
@@ -1263,8 +1243,6 @@ namespace StudentManagement.Controllers
                 return NotFound();
             }
 
-            // Chúng ta chỉ cần thông tin cơ bản của user để hiển thị tên
-            // và dùng UserId để POST form
             return View(user);
         }
 
@@ -1272,7 +1250,7 @@ namespace StudentManagement.Controllers
         // POST: /Admin/ChangePassword/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // Dùng ViewModel để lấy NewPassword và ConfirmPassword
+        
         public async Task<IActionResult> ChangePassword(int UserId, string NewPassword, string ConfirmPassword)
         {
             if (NewPassword != ConfirmPassword)
@@ -1281,7 +1259,7 @@ namespace StudentManagement.Controllers
                 return RedirectToAction(nameof(ChangePassword), new { id = UserId });
             }
 
-            // Tùy chọn: Thêm kiểm tra độ mạnh mật khẩu (ví dụ: dài tối thiểu 6 ký tự)
+           
             if (string.IsNullOrEmpty(NewPassword) || NewPassword.Length < 6)
             {
                 TempData["ErrorMessage"] = "Mật khẩu phải có ít nhất 6 ký tự.";
@@ -1296,10 +1274,8 @@ namespace StudentManagement.Controllers
 
             try
             {
-                // TRONG THỰC TẾ, PHẢI HASH MẬT KHẨU Ở ĐÂY
-                // user.PasswordHash = HashPassword(NewPassword); 
-                user.PasswordHash = NewPassword; // Tạm thời lưu thô để demo
-
+               
+                user.PasswordHash = NewPassword; 
                 _context.Update(user);
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = $"Đã đổi mật khẩu cho người dùng **{user.Username}** thành công.";
@@ -1309,12 +1285,12 @@ namespace StudentManagement.Controllers
                 TempData["ErrorMessage"] = "Lỗi khi lưu mật khẩu mới vào cơ sở dữ liệu.";
             }
 
-            return RedirectToAction(nameof(Users)); // Chuyển hướng về trang danh sách người dùng
+            return RedirectToAction(nameof(Users)); 
         }
 
         // Tuitions Management
         
-        // 1. Action: Hiển thị trang Quản Lý Học Phí (Index)
+        
         public async Task<IActionResult> Tuitions(
             string search,
             string filterStatus,
@@ -1323,10 +1299,10 @@ namespace StudentManagement.Controllers
             int entriesPerPage = 10,
             int pageNumber = 1)
         {
-            // Lấy ngày hiện tại CHỈ MỘT LẦN ở C# (Server-side)
+            
             var today = DateOnly.FromDateTime(DateTime.Today);
 
-            // 1. Khởi tạo truy vấn và Eager loading
+            
             IQueryable<Tuition> tuitionsQuery = _context.Tuitions
                 .Include(t => t.Enrollment)
                     .ThenInclude(e => e.Student)
@@ -1334,7 +1310,7 @@ namespace StudentManagement.Controllers
                     .ThenInclude(e => e.Class)
                         .ThenInclude(c => c.Course);
 
-            // 2. Lọc theo Tìm kiếm (Search)
+           
             if (!string.IsNullOrEmpty(search))
             {
                 string searchLower = search.ToLower();
@@ -1344,7 +1320,6 @@ namespace StudentManagement.Controllers
                     t.Enrollment.Class.ClassName.ToLower().Contains(searchLower));
             }
 
-            // 3. Lọc theo Trạng thái (Status)
             if (!string.IsNullOrEmpty(filterStatus))
             {
                 if (filterStatus == "Overdue")
@@ -1366,14 +1341,14 @@ namespace StudentManagement.Controllers
                 }
             }
 
-            // 4. Lọc theo Tháng (Tháng của Hạn Đóng)
+           
             if (filterMonth.HasValue && filterMonth.Value >= 1 && filterMonth.Value <= 12)
             {
                 tuitionsQuery = tuitionsQuery.Where(t =>
                     t.DueDate.HasValue && t.DueDate.Value.Month == filterMonth.Value);
             }
 
-            // 5. Sắp xếp (SortBy)
+            
             tuitionsQuery = sortBy switch
             {
                 "overdue" => tuitionsQuery
@@ -1409,8 +1384,7 @@ namespace StudentManagement.Controllers
             return View(tuitions);
         }
 
-        // 2. Action: Xuất Excel (Xuất Excel)
-        // Tương ứng với nút "Xuất Excel"
+      
         [HttpPost]
         public async Task<IActionResult> ExportExcelTuition()
         {
@@ -1426,7 +1400,7 @@ namespace StudentManagement.Controllers
             {
                 var worksheet = package.Workbook.Worksheets.Add("DanhSachHocPhi");
 
-                // Header
+               
                 worksheet.Cells[1, 1].Value = "ID";
                 worksheet.Cells[1, 2].Value = "Mã SV";
                 worksheet.Cells[1, 3].Value = "Tên Sinh Viên";
@@ -1439,7 +1413,7 @@ namespace StudentManagement.Controllers
                 worksheet.Cells[1, 10].Value = "Trạng Thái";
                 worksheet.Cells[1, 1, 1, 10].Style.Font.Bold = true;
 
-                // Data
+               
                 for (int i = 0; i < tuitions.Count; i++)
                 {
                     var tuition = tuitions[i];
@@ -1498,10 +1472,10 @@ namespace StudentManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Cập nhật số tiền đã đóng
+            
             tuition.AmountPaid += amountPaid;
 
-            // Cập nhật trạng thái
+            
             if (tuition.AmountPaid >= tuition.TotalFee)
             {
                 tuition.Status = "Paid";
@@ -1541,7 +1515,7 @@ namespace StudentManagement.Controllers
             return RedirectToAction(nameof(Tuitions));
         }
 
-        // Action AJAX/API để lấy thông tin học phí khi chọn sinh viên trong modal
+       
         [HttpGet]
         public async Task<IActionResult> GetTuitionDetails(int tuitionId)
         {
@@ -1562,26 +1536,22 @@ namespace StudentManagement.Controllers
             return Json(new
             {
                 className = tuition.Enrollment.Class.ClassName,
-                // SỬA: Thay đổi các trường TotalFee/AmountPaid/Remaining thành giá trị số (decimal)
                 totalFeeDecimal = tuition.TotalFee,
                 amountPaidDecimal = tuition.AmountPaid,
                 remainingDecimal = remaining,
 
-                // Giữ lại các trường string đã format nếu muốn dùng cho mục đích hiển thị khác
                 totalFee = tuition.TotalFee.ToString("N0"),
                 amountPaid = tuition.AmountPaid.ToString("N0"),
                 remaining = remaining.ToString("N0"),
             });
         }
-        // 5. Action AJAX/API để lấy lịch sử thanh toán (Receipts)
         [HttpGet]
         public async Task<IActionResult> GetPaymentHistory(int tuitionId)
         {
-            // Lấy tất cả các biên lai liên quan đến TuitionId này
             var receipts = await _context.Receipts
-                .Include(r => r.Cashier) // Cashier là User đã thu tiền
+                .Include(r => r.Cashier) 
                 .Where(r => r.TuitionId == tuitionId)
-                .OrderByDescending(r => r.PaymentDate) // Biên lai mới nhất lên trước
+                .OrderByDescending(r => r.PaymentDate) 
                 .ToListAsync();
 
             if (!receipts.Any())
@@ -1589,40 +1559,38 @@ namespace StudentManagement.Controllers
                 return Json(new { success = false, message = "Không tìm thấy lịch sử thanh toán." });
             }
 
-            // Định dạng dữ liệu để gửi về View/Client
             var historyData = receipts.Select(r => new
             {
                 receiptCode = r.ReceiptCode,
                 amount = r.Amount.ToString("N0"),
                 paymentDate = r.PaymentDate.ToString("dd/MM/yyyy HH:mm"),
-                cashierName = r.Cashier.FullName ?? r.Cashier.Username, // Hiển thị tên người thu tiền
+                cashierName = r.Cashier.FullName ?? r.Cashier.Username, 
                 note = r.Note
             }).ToList();
 
             return Json(new { success = true, history = historyData });
         }
 
-        // Notifications
+        
         public async Task<IActionResult> Notifications(string filterDate, string sortBy)
         {
-            // 1. Khởi tạo truy vấn IQueryable
+            
             IQueryable<Notification> query = _context.Notifications
                 .Include(n => n.Creator)
                 .Include(n => n.NotificationRecipients);
-            // 2. LỌC THEO THỜI GIAN
+            
             query = ApplyTimeFilter(query, filterDate);
 
-            // 3. SẮP XẾP
+            
             query = ApplySortOrder(query, sortBy);
 
-            // 4. Thực thi truy vấn và trả về kết quả
+            
             var notifications = await query.ToListAsync();
 
-            // 5. CẬP NHẬT VIEW BAG (Quan trọng để giữ trạng thái trên View và tính lại Stats)
+            
             ViewBag.CurrentFilterDate = filterDate ?? "all";
             ViewBag.CurrentSortBy = sortBy ?? "newest";
 
-            // Tính toán thống kê dựa trên dữ liệu đã được lọc (notifications)
             ViewBag.TotalNotifications = notifications.Count();
             ViewBag.TodayNotifications = notifications.Count(n => n.CreatedDate.Date == DateTime.Today);
             ViewBag.TotalRecipients = notifications.Sum(n => n.NotificationRecipients.Count);
@@ -1636,10 +1604,8 @@ namespace StudentManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string title, string content, string recipientTarget, string sendTime, DateTime? scheduleDateTime, bool sendEmail)
         {
-            // [GIẢ ĐỊNH] Lấy ID người dùng hiện tại
             int creatorId = GetCurrentUserId();
 
-            // 1. Tạo đối tượng Notification
             var newNotification = new Notification
             {
                 Title = title,
@@ -1651,7 +1617,6 @@ namespace StudentManagement.Controllers
             _context.Add(newNotification);
             await _context.SaveChangesAsync();
 
-            // 2. Xử lý logic người nhận (Sử dụng RecipientId giả định)
             var recipientIds = GetRecipientUserIds(recipientTarget);
 
             foreach (var userId in recipientIds)
@@ -1664,7 +1629,6 @@ namespace StudentManagement.Controllers
                 });
             }
 
-            // Ghi tất cả người nhận một lần duy nhất (đã sửa lỗi hiệu suất)
             await _context.SaveChangesAsync();
             string logDetails = $"Thông báo ID {newNotification.NotificationId} ({newNotification.Title}). Gửi đến: {recipientTarget}";
             await LogAction("Tạo thông báo", logDetails, creatorId);
@@ -1673,7 +1637,6 @@ namespace StudentManagement.Controllers
             return Ok(new { success = true, message = "Tạo thông báo thành công." });
         }
         // POST: /Notification/Edit/5
-        // POST: /Notification/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, string title, string content,
@@ -1681,7 +1644,7 @@ namespace StudentManagement.Controllers
                                               DateTime? scheduleDateTime)
         {
             var notification = await _context.Notifications
-                .Include(n => n.NotificationRecipients) // Phải Include người nhận để xóa
+                .Include(n => n.NotificationRecipients) 
                 .FirstOrDefaultAsync(n => n.NotificationId == id);
 
             if (notification == null)
@@ -1691,16 +1654,13 @@ namespace StudentManagement.Controllers
 
             int editorId = GetCurrentUserId();
 
-            // 1. Cập nhật các trường cơ bản và Thời gian gửi
             notification.Title = title;
             notification.Content = content;
 
-            // Xử lý thời gian gửi: Tương tự như Create
             notification.CreatedDate = sendTime == "schedule" && scheduleDateTime.HasValue
                                        ? scheduleDateTime.Value
                                        : DateTime.Now;
 
-            // 2. Cập nhật Người nhận
 
             // a. Xóa tất cả người nhận cũ liên quan đến thông báo này (đã tải qua Include)
             _context.NotificationRecipients.RemoveRange(notification.NotificationRecipients);
@@ -1721,11 +1681,11 @@ namespace StudentManagement.Controllers
 
             try
             {
-                // 3. Lưu tất cả thay đổi (cập nhật Notification, xóa cũ, thêm mới NotificationRecipients)
+                
                 _context.Update(notification);
                 await _context.SaveChangesAsync();
 
-                // GHI LOG HOẠT ĐỘNG
+               
                 string logDetails = $"Thông báo ID {id} ({title}). Đã cập nhật tiêu đề, nội dung, người nhận và lịch gửi.";
                 await LogAction("Chỉnh sửa thông báo", logDetails, editorId);
 
@@ -1739,24 +1699,23 @@ namespace StudentManagement.Controllers
 
         // GET: /Notification/ExportExcel
         /// <summary>
-        /// Xử lý xuất file Excel, trả về file cho trình duyệt.
-        /// </summary>
+        
         public async Task<IActionResult> ExportExcelNotification()
         {
-            // 1. Truy vấn Dữ liệu
+           
             var notifications = await _context.Notifications
                 .Include(n => n.Creator)
                 .Include(n => n.NotificationRecipients)
                 .OrderByDescending(n => n.CreatedDate)
                 .ToListAsync();
 
-            // 2. Tạo File Excel
+            
             using (var package = new ExcelPackage())
             {
-                // Tạo một Worksheet
+                
                 var worksheet = package.Workbook.Worksheets.Add("Lịch Sử Thông Báo");
 
-                // 3. Viết Header
+               
                 worksheet.Cells[1, 1].Value = "STT";
                 worksheet.Cells[1, 2].Value = "Tiêu Đề";
                 worksheet.Cells[1, 3].Value = "Nội Dung (Tóm tắt)";
@@ -1766,7 +1725,7 @@ namespace StudentManagement.Controllers
                 worksheet.Cells[1, 7].Value = "Đã Đọc";
                 worksheet.Cells[1, 8].Value = "Tỷ Lệ Đọc";
 
-                // Định dạng Header
+                
                 using (var range = worksheet.Cells["A1:H1"])
                 {
                     range.Style.Font.Bold = true;
@@ -1775,11 +1734,11 @@ namespace StudentManagement.Controllers
                     range.Style.Font.Color.SetColor(System.Drawing.Color.Black);
                 }
 
-                // 4. Viết Nội dung Dữ liệu
+                
                 for (int i = 0; i < notifications.Count; i++)
                 {
                     var n = notifications[i];
-                    int row = i + 2; // Bắt đầu từ hàng thứ 2
+                    int row = i + 2; 
 
                     var recipientCount = n.NotificationRecipients.Count;
                     var readCount = n.NotificationRecipients.Count(r => r.IsRead);
@@ -1798,13 +1757,13 @@ namespace StudentManagement.Controllers
                     worksheet.Cells[row, 8].Value = readPercentage.ToString("F1") + "%";
                 }
 
-                // 5. Tự động điều chỉnh độ rộng cột
+                
                 worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
-                // 6. Chuyển package thành mảng byte
+                
                 var excelData = package.GetAsByteArray();
 
-                // 7. Trả về file cho trình duyệt tải về
+                
                 return File(
                     fileContents: excelData,
                     contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1813,45 +1772,41 @@ namespace StudentManagement.Controllers
             }
         }
         // GET: /Notification/History
-        /// <summary>
-        /// Trả về dữ liệu lịch sử hoạt động của người dùng (truy vấn từ ActionLogs).
-        /// </summary>
+       
         [HttpGet]
         public async Task<IActionResult> History()
         {
             // Lấy ngày hôm nay để so sánh
             var today = DateTime.Today;
 
-            // 1. Truy vấn DB: Lấy ActionLogs, tải kèm thông tin User (người thực hiện)
-            // Giới hạn số lượng (ví dụ: 50 bản ghi gần nhất)
             var logEntries = await _context.ActionLogs
-                .Include(l => l.User) // Tải thông tin người dùng từ bảng Users
+                .Include(l => l.User) 
                 .Where(l => l.Action.Contains("Thông báo") ||
                             l.Action.Contains("Tạo") ||
                             l.Action.Contains("Sửa") ||
                             l.Action.Contains("Xóa") ||
-                            l.Action.Contains("Gửi")) // Lọc các hành động liên quan đến Thông báo
+                            l.Action.Contains("Gửi")) 
                 .OrderByDescending(l => l.LogDate)
                 .Take(50)
                 .ToListAsync();
 
-            // 2. Ánh xạ dữ liệu sang định dạng JSON phù hợp với JavaScript
+            
             var historyData = logEntries.Select(l => new
             {
-                // Sử dụng LogDate từ DB thay vì DateTime.Now
+                
                 Time = l.LogDate,
-                // Lấy FullName của người dùng từ mối quan hệ User
+                
                 User = l.User != null ? l.User.FullName : "Unknown",
                 Action = l.Action,
-                // Cần có logic để xác định Type (Gửi, Sửa, Xóa, Tự động)
+                
                 Type = GetActionType(l.Action)
             }).ToList();
 
-            // 3. Trả về dữ liệu dưới dạng JSON
+            
             return Json(historyData);
         }
 
-        // Hàm hỗ trợ để xác định loại hành động (Type) dựa trên nội dung Action
+        
         private string GetActionType(string action)
         {
             var lowerAction = action?.ToLower() ?? string.Empty;
@@ -1890,28 +1845,28 @@ namespace StudentManagement.Controllers
                 UserId = userId,
                 Action = actionName,
                 Details = details,
-                LogDate = DateTime.Now // Ghi nhận thời điểm hiện tại
+                LogDate = DateTime.Now 
             };
 
             _context.ActionLogs.Add(logEntry);
             await _context.SaveChangesAsync();
         }
 
-        // *************** Các hàm giả định/hỗ trợ ***************
+       
         private int GetCurrentUserId()
         {
-            return 1; // Giá trị cố định cho mục đích minh họa
+            return 1; 
         }
 
         private List<int> GetRecipientUserIds(string target)
         {
-            // Logic tìm kiếm IDs dựa trên target (all, students, teachers, class...)
+            
             return _context.Users.Select(u => u.UserId).ToList();
         }
         [HttpGet]
         public async Task<IActionResult> GetClassList()
         {
-            // Cần phải Include Course vì CourseName được dùng trong JS
+           
             var classes = await _context.Classes
                 .Include(c => c.Course)
                 .Select(c => new
@@ -1925,7 +1880,7 @@ namespace StudentManagement.Controllers
 
             return Json(classes);
         }
-        // *************** HÀM HỖ TRỢ LỌC VÀ SẮP XẾP ***************
+        
 
         private IQueryable<Notification> ApplyTimeFilter(IQueryable<Notification> query, string filter)
         {
@@ -1964,24 +1919,20 @@ namespace StudentManagement.Controllers
 
         private DateTime GetStartOfWeek(DateTime date)
         {
-            // Giả sử tuần bắt đầu từ Chủ Nhật (Sunday)
+           // Giả sử tuần bắt đầu từ Chủ Nhật (Sunday)
             int diff = (7 + (date.DayOfWeek - DayOfWeek.Sunday)) % 7;
             return date.AddDays(-1 * diff).Date;
         }
-        /// <summary>
-        /// Lấy thông tin chi tiết của một thông báo theo ID từ cơ sở dữ liệu.
-        /// </summary>
+
         // GET: /Notification/GetNotificationDetail/5
         [HttpGet]
         public async Task<IActionResult> GetNotificationDetail(int id)
         {
-            // 1. Truy vấn thông báo chi tiết bằng ID.
-            // Sử dụng Include để tải các mối quan hệ (Creator và NotificationRecipients)
-            // để tránh vấn đề N+1 query.
+           
             var notification = await _context.Notifications
                 .Include(n => n.Creator)
                 .Include(n => n.NotificationRecipients)
-                    .ThenInclude(r => r.Recipient) // Giả định Recipient là User
+                    .ThenInclude(r => r.Recipient) 
                 .FirstOrDefaultAsync(n => n.NotificationId == id);
 
             if (notification == null)
@@ -1989,43 +1940,40 @@ namespace StudentManagement.Controllers
                 return NotFound(new { message = $"Không tìm thấy thông báo chi tiết với ID: {id}." });
             }
 
-            // 2. Chuẩn bị dữ liệu để trả về JSON
-
-            // Lấy tên 5 người nhận đầu tiên cho mục đích hiển thị tóm tắt.
+           
             var recipientNames = notification.NotificationRecipients
-                // Giả định Recipient có trường FullName
+                
                 .Select(r => r.Recipient.FullName)
                 .Take(5)
                 .ToList();
 
-            // Xử lý trường hợp không có người nhận
+            
             if (!recipientNames.Any())
             {
                 recipientNames.Add("Không có người nhận cụ thể");
             }
 
-            // 3. Tạo đối tượng JSON trả về (phải khớp với cấu trúc trong JS)
+           
             var detail = new
             {
                 Id = notification.NotificationId,
                 Title = notification.Title,
                 Content = notification.Content,
 
-                // Sử dụng CreatedDate (hoặc ScheduleDate nếu bạn có trường đó)
+                
                 ScheduleDate = notification.CreatedDate.ToString("dd/MM/yyyy"),
                 ScheduleTime = notification.CreatedDate.ToString("HH:mm"),
 
-                // Bạn cần logic để xác định RecipientGroup (Ví dụ: "Toàn bộ", "Lớp X").
-                // Tạm thời lấy tên người tạo cho đơn giản.
+                
                 RecipientGroup = "Được tạo bởi: " + notification.Creator?.FullName,
 
-                // Danh sách tên người nhận (dùng để hiển thị chi tiết trong modal)
+               
                 Recipients = recipientNames,
 
-                // Trạng thái đơn giản
+                
                 Status = (notification.CreatedDate > DateTime.Now) ? "Đã lên lịch" : "Đã gửi",
 
-                // Tổng số lượng
+                
                 TotalRecipients = notification.NotificationRecipients.Count
             };
 
@@ -2036,7 +1984,7 @@ namespace StudentManagement.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             int deleterId = GetCurrentUserId();
-            // 1. Tìm thông báo cần xóa
+            
             var notification = await _context.Notifications
                 .FirstOrDefaultAsync(n => n.NotificationId == id);
 
@@ -2046,7 +1994,7 @@ namespace StudentManagement.Controllers
             }
             string deletedTitle = notification.Title;
 
-            // 2. Xóa thông báo
+            
             try
             {
                 _context.Notifications.Remove(notification);
@@ -2055,12 +2003,11 @@ namespace StudentManagement.Controllers
                 string logDetails = $"Thông báo ID {id} ({deletedTitle}). Đã bị xóa vĩnh viễn.";
                 await LogAction("Xóa thông báo", logDetails, deleterId);
 
-                // 3. Trả về kết quả thành công
+                
                 return Ok(new { success = true, message = $"Đã xóa thông báo ID {id} thành công." });
             }
             catch (DbUpdateException ex)
             {
-                // Xử lý lỗi nếu có ràng buộc ngoại lệ nào đó (ít xảy ra với CASCADE đã cấu hình)
                 return StatusCode(500, new { success = false, message = "Lỗi cơ sở dữ liệu khi xóa thông báo.", error = ex.Message });
             }
             catch (Exception ex)
@@ -2069,19 +2016,15 @@ namespace StudentManagement.Controllers
             }
         }
         // POST: /Notification/Resend/5
-        /// <summary>
-        /// Gửi lại một thông báo đã có, tạo ra một bản ghi thông báo mới với ngày tạo là thời điểm hiện tại.
-        /// </summary>
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Resend(int id)
         {
-            // [GIẢ ĐỊNH] Lấy ID người dùng hiện tại
             int creatorId = GetCurrentUserId();
 
-            // 1. Tìm thông báo gốc
             var originalNotification = await _context.Notifications
-                .Include(n => n.NotificationRecipients) // Cần tải người nhận để sao chép
+                .Include(n => n.NotificationRecipients) 
                 .FirstOrDefaultAsync(n => n.NotificationId == id);
 
             if (originalNotification == null)
@@ -2089,26 +2032,23 @@ namespace StudentManagement.Controllers
                 return NotFound(new { success = false, message = $"Không tìm thấy thông báo ID {id} để gửi lại." });
             }
 
-            // 2. Tạo đối tượng Notification mới (Bản sao)
             var newNotification = new Notification
             {
                 Title = originalNotification.Title,
                 Content = originalNotification.Content,
-                // Ghi đè CreatedDate là thời điểm hiện tại (ngay khi nhấn Gửi lại)
                 CreatedDate = DateTime.Now,
                 CreatorId = creatorId,
             };
 
             _context.Add(newNotification);
 
-            // 3. Sao chép danh sách người nhận (tạo bản ghi NotificationRecipient mới)
             foreach (var recipient in originalNotification.NotificationRecipients)
             {
                 newNotification.NotificationRecipients.Add(new NotificationRecipient
                 {
-                    NotificationId = newNotification.NotificationId, // ID mới sẽ được EF Core tự động gán
+                    NotificationId = newNotification.NotificationId, 
                     RecipientId = recipient.RecipientId,
-                    IsRead = false // Reset trạng thái đọc
+                    IsRead = false 
                 });
             }
 
@@ -2116,7 +2056,7 @@ namespace StudentManagement.Controllers
             {
                 await _context.SaveChangesAsync();
 
-                // GHI LOG HOẠT ĐỘNG
+                
                 string logDetails = $"Gửi lại thông báo gốc ID {id} (\"{originalNotification.Title}\"). Đã tạo thông báo mới ID {newNotification.NotificationId}.";
                 await LogAction("Gửi lại thông báo", logDetails, creatorId);
 
@@ -2172,7 +2112,7 @@ namespace StudentManagement.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCourseDistributionData()
         {
-            // Lấy tổng số sinh viên (Enrollments) theo Khóa học
+            
             var courseEnrollments = await _context.Courses
                 .Select(c => new
                 {
@@ -2192,8 +2132,7 @@ namespace StudentManagement.Controllers
         [HttpGet]
         public async Task<IActionResult> GetScoreDistributionData()
         {
-            // *GIẢ ĐỊNH*: Lấy tất cả điểm số và phân loại thành 4 nhóm
-            // Trong thực tế, bạn nên lọc theo Khóa học/Lớp học hiện tại
+            
             var allScores = await _context.Scores
                 .Select(s => s.ScoreValue)
                 .ToListAsync();
