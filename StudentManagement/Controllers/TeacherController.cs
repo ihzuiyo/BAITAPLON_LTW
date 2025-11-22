@@ -238,7 +238,46 @@ namespace StudentManagement.Controllers
             return RedirectToAction("Profile");
         }
 
-       
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        //{
+        //    var user = await _context.Users.FindAsync();
+        //    if (!ModelState.IsValid || user == null)
+        //    {
+        //        // Cần tái tạo model Teacher để trả về View Profile
+        //        var currentTeacher = await _context.Teachers
+        //           .Include(t => t.User).ThenInclude(u => u.Role)
+        //           .Include(t => t.Classes).ThenInclude(c => c.Course)
+        //           .FirstOrDefaultAsync();
+
+        //        ViewBag.ChangePasswordModel = model;
+        //        TempData["ShowChangePasswordModal"] = true;
+        //        return View("Profile", currentTeacher);
+        //    }
+        //    if (user.PasswordHash != model.OldPassword)
+        //    {
+        //        ModelState.AddModelError("OldPassword", "Mật khẩu cũ không chính xác.");
+
+        //        // Cần tái tạo model Teacher để trả về View Profile
+        //        var currentTeacher = await _context.Teachers
+        //           .Include(t => t.User).ThenInclude(u => u.Role)
+        //           .Include(t => t.Classes).ThenInclude(c => c.Course)
+        //           .FirstOrDefaultAsync();
+
+        //        ViewBag.ChangePasswordModel = model;
+        //        TempData["ShowChangePasswordModal"] = true;
+        //        return View("Profile", currentTeacher);
+        //    }
+
+        //    user.PasswordHash = model.NewPassword;
+        //    await _context.SaveChangesAsync();
+
+        //    // 3. Chuyển hướng
+        //    TempData["SuccessMessage"] = "Đổi mật khẩu thành công. Vui lòng đăng nhập lại.";
+        //    return RedirectToAction("Login", "Account");
+
+        //}
 
         public async Task<IActionResult> ExportClassesToExcel()
         {
