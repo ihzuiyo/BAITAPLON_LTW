@@ -292,8 +292,10 @@
                                         <i class="fas fa-history"></i>
                                     </a>
 
-                                    <a href="@Url.Action("Tuitions", "Admin", new { id = tuition.TuitionId })"
-                                       class="btn btn-sm btn-warning" title="In biên lai" target="_blank">
+                                    <a href="@Url.Action("PrintReceipt", "Admin", new { id = tuition.TuitionId })"
+                                       class="btn btn-sm btn-warning"
+                                       title="In biên lai (Xuất PDF)"
+                                       target="_blank">
                                         <i class="fas fa-print"></i>
                                     </a>
                                 </div>
